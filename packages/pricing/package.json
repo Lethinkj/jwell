@@ -1,0 +1,11 @@
+{
+  "name": "@gold-shop/pricing",
+  "version": "1.0.0",
+  "description": "Pure gold jewellery pricing engine (§7). No UI, no I/O. Money in integer paise.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "echo 'no build step (pure JS)'",
+    "test": "node --test test/*.test.js"
+  }
+}

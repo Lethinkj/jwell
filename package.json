@@ -1,0 +1,24 @@
+{
+  "name": "gold-shop-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gold Jewellery Shop Management System — web-first boutique platform (public catalogue + admin dashboard + shared API)",
+  "workspaces": [
+    "apps/web",
+    "server",
+    "packages/*"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces",
+    "dev:server": "npm run dev -w server",
+    "dev:web": "npm run dev -w web",
+    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w web\"",
+    "build": "npm run build -w @gold-shop/pricing && npm run build -w server && npm run build -w web",
+    "test": "npm run test -w @gold-shop/pricing && npm run test -w server",
+    "seed": "npm run seed -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "typescript": "^5.6.0"
+  }
+}

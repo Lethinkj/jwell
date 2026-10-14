@@ -1,0 +1,7 @@
+{
+  "name": "@gold-shop/types",
+  "version": "1.0.0",
+  "description": "Shared domain types + API contracts (§8/§9)",
+  "type": "module",
+  "main": "src/index.js"
+}
