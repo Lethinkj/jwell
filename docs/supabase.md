@@ -44,10 +44,9 @@ npm run dev -w server   # logs: db: Supabase Postgres
 `/api/health` reports `"db": "supabase-postgres"` when connected.
 
 ## Notes
-- Without `DATABASE_URL`, the server falls back to local SQLite (`DATABASE_FILE`)
-  so tests and offline dev keep working with zero setup.
+- `DATABASE_URL` is required — the server is Postgres-only (no SQLite fallback).
 - The backend connects with the **service/database role** string, so it bypasses
   RLS — keep the connection string server-side only, never in the web app.
   If you later enable RLS on these tables, add policies for the service role.
 - `packages/pricing` is untouched: the same paise-integer engine prices every
-  estimate and finalized invoice on both databases.
+  estimate and finalized invoice.

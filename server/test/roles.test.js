@@ -3,11 +3,12 @@ const assert = require('node:assert/strict');
 const { before } = require('node:test');
 const bcrypt = require('bcryptjs');
 
-process.env.DATABASE_FILE = ':memory:';
-// Never touch live Supabase from tests (server/.env may define DATABASE_URL).
-process.env.DATABASE_URL = '';
-process.env.SUPABASE_DB_URL = '';
-process.env.JWT_SECRET = 'test-secret-32chars-minimum-xxxxxx';
+// Postgres-only tests: require DATABASE_URL (or SUPABASE_DB_URL).
+// Use a dedicated test database — fixtures are inserted on every run.
+if (!process.env.DATABASE_URL && !process.env.SUPABASE_DB_URL) {
+  throw new Error('Missing DATABASE_URL for tests. Set it to your Supabase/test Postgres connection string.');
+}
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret-32chars-minimum-xxxxxx';
 
 const app = require('../src/index');
 const { get, run, uid } = require('../src/db');

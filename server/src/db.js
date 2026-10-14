@@ -1,21 +1,31 @@
 /**
- * Dual-backend data layer.
- * - Supabase Postgres when DATABASE_URL (or SUPABASE_DB_URL) is set (pg Pool, SSL).
- * - Local SQLite (better-sqlite3) otherwise — dev/tests fallback.
+ * Postgres-only data layer (Supabase Postgres via pg Pool, SSL).
  *
- * Same schema, same queries, same results. Async API on both backends:
+ * Requires DATABASE_URL (or SUPABASE_DB_URL). No SQLite fallback.
+ *
+ * Async API:
  *   get(sql, ...params) -> row | undefined
  *   all(sql, ...params) -> rows[]
  *   run(sql, ...params) -> { changes }
  *   withTransaction(async (tx) => ...) — tx has get/all/run on one connection
  * Helpers: nowFn() (current-timestamp SQL), dayExpr(col) (YYYY-MM-DD grouping),
- *   initDb() (idempotent schema), uid(), isPg.
+ *   initDb() (idempotent schema), uid(), isPg (always true, kept for compat).
  */
 const fs = require('fs');
 const path = require('path');
+// Load server/.env first, then repo-root .env as fallback.
+// `npm run dev -w server` sets cwd to server/, so plain config() misses the root .env.
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
 
 const DATABASE_URL = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || '';
-const isPg = Boolean(DATABASE_URL);
+if (!DATABASE_URL) {
+  throw new Error(
+    'Missing DATABASE_URL (or SUPABASE_DB_URL). Postgres-only mode has no SQLite fallback. ' +
+      'Set it to your Supabase connection string, e.g. postgresql://postgres:<pw>@db.<ref>.supabase.co:5432/postgres'
+  );
+}
+const isPg = true;
 
 /** Convert `?` placeholders to Postgres `$1, $2, ...`. (No literal `?` in our SQL.) */
 function toPg(sql) {
@@ -23,36 +33,24 @@ function toPg(sql) {
   return sql.replace(/\?/g, () => `$${++i}`);
 }
 
-let pgPool = null;
-let sqliteDb = null;
+const { Pool, types } = require('pg');
+types.setTypeParser(20, (v) => parseInt(v, 10)); // int8 (COUNT(*)) -> JS int
+types.setTypeParser(1700, (v) => parseFloat(v)); // numeric -> JS number
+const pgPool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: { rejectUnauthorized: false }, // Supabase requires SSL
+  max: 10,
+});
+pgPool.on('error', (e) => console.error('[db] pg pool error:', e.message));
 
-if (isPg) {
-  const { Pool, types } = require('pg');
-  types.setTypeParser(20, (v) => parseInt(v, 10)); // int8 (COUNT(*)) -> JS int
-  types.setTypeParser(1700, (v) => parseFloat(v)); // numeric -> JS number
-  pgPool = new Pool({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false }, // Supabase requires SSL
-    max: 10,
-  });
-  pgPool.on('error', (e) => console.error('[db] pg pool error:', e.message));
-} else {
-  const Database = require('better-sqlite3');
-  const DB_FILE = process.env.DATABASE_FILE || path.join(__dirname, '..', 'data', 'shop.db');
-  if (DB_FILE !== ':memory:') fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
-  sqliteDb = new Database(DB_FILE);
-  sqliteDb.pragma('journal_mode = WAL');
-  sqliteDb.pragma('foreign_keys = ON');
-}
-
-/** Current-timestamp SQL fragment for this backend. */
+/** Current-timestamp SQL fragment. */
 function nowFn() {
-  return isPg ? 'now()' : `datetime('now')`;
+  return 'now()';
 }
 
 /** YYYY-MM-DD grouping expression for a timestamp column. */
 function dayExpr(col) {
-  return isPg ? `to_char(${col},'YYYY-MM-DD')` : `substr(${col},1,10)`;
+  return `to_char(${col},'YYYY-MM-DD')`;
 }
 
 async function pgQuery(client, sql, params) {
@@ -66,101 +64,57 @@ async function pgQuery(client, sql, params) {
 }
 
 async function get(sql, ...params) {
-  if (isPg) return (await pgQuery(pgPool, sql, params)).rows[0];
-  return sqliteDb.prepare(sql).get(...params);
+  return (await pgQuery(pgPool, sql, params)).rows[0];
 }
 
 async function all(sql, ...params) {
-  if (isPg) return (await pgQuery(pgPool, sql, params)).rows;
-  return sqliteDb.prepare(sql).all(...params);
+  return (await pgQuery(pgPool, sql, params)).rows;
 }
 
 async function run(sql, ...params) {
-  if (isPg) return { changes: (await pgQuery(pgPool, sql, params)).rowCount };
-  return sqliteDb.prepare(sql).run(...params);
+  return { changes: (await pgQuery(pgPool, sql, params)).rowCount };
 }
 
 async function exec(sql) {
-  if (isPg) { await pgPool.query(sql); return; }
-  sqliteDb.exec(sql);
+  await pgPool.query(sql);
 }
 
 async function withTransaction(fn) {
-  if (isPg) {
-    const client = await pgPool.connect();
-    const tx = {
-      get: async (sql, ...p) => (await pgQuery(client, sql, p)).rows[0],
-      all: async (sql, ...p) => (await pgQuery(client, sql, p)).rows,
-      run: async (sql, ...p) => ({ changes: (await pgQuery(client, sql, p)).rowCount }),
-    };
-    try {
-      await client.query('BEGIN');
-      const out = await fn(tx);
-      await client.query('COMMIT');
-      return out;
-    } catch (e) {
-      try { await client.query('ROLLBACK'); } catch { /* ignore */ }
-      throw e;
-    } finally {
-      client.release();
-    }
-  }
-  sqliteDb.exec('BEGIN IMMEDIATE');
+  const client = await pgPool.connect();
   const tx = {
-    get: async (sql, ...p) => sqliteDb.prepare(sql).get(...p),
-    all: async (sql, ...p) => sqliteDb.prepare(sql).all(...p),
-    run: async (sql, ...p) => sqliteDb.prepare(sql).run(...p),
+    get: async (sql, ...p) => (await pgQuery(client, sql, p)).rows[0],
+    all: async (sql, ...p) => (await pgQuery(client, sql, p)).rows,
+    run: async (sql, ...p) => ({ changes: (await pgQuery(client, sql, p)).rowCount }),
   };
   try {
+    await client.query('BEGIN');
     const out = await fn(tx);
-    sqliteDb.exec('COMMIT');
+    await client.query('COMMIT');
     return out;
   } catch (e) {
-    try { sqliteDb.exec('ROLLBACK'); } catch { /* ignore */ }
+    try { await client.query('ROLLBACK'); } catch { /* ignore */ }
     throw e;
+  } finally {
+    client.release();
   }
 }
 
 let _ready = null;
-const MIGRATIONS = ['0001_init', '0002_roles_staff'];
-const migFile = (m, pg) => fs.readFileSync(
-  path.join(__dirname, '..', '..', 'supabase', 'migrations', `${m}${pg ? '_pg' : ''}.sql`), 'utf8');
-
-/** Drop ALTER TABLE ... ADD COLUMN lines whose column already exists (SQLite has no ADD COLUMN IF NOT EXISTS). */
-function stripExistingColumns(ddl) {
-  const cols = {};
-  for (const t of ['profiles', 'customers', 'product_barcodes']) {
-    try {
-      for (const c of sqliteDb.prepare(`PRAGMA table_info(${t})`).all()) cols[`${t}.${c.name}`] = 1;
-    } catch { /* table missing — migration will create/fail loudly */ }
-  }
-  return ddl.split('\n').filter((line) => {
-    const m = line.match(/^\s*ALTER TABLE\s+(\w+)\s+ADD COLUMN\s+(\w+)/i);
-    return !(m && cols[`${m[1]}.${m[2]}`]);
-  }).join('\n');
-}
+const MIGRATIONS = ['0001_init', '0002_roles_staff', '0003_offers_created_at'];
+const migFile = (m) => fs.readFileSync(
+  path.join(__dirname, '..', '..', 'supabase', 'migrations', `${m}_pg.sql`), 'utf8');
 
 function initDb() {
   if (!_ready) {
     _ready = (async () => {
-      if (isPg) {
-        await pgPool.query(`CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
-        for (const m of MIGRATIONS) {
-          const done = await pgPool.query(`SELECT 1 FROM schema_migrations WHERE name = $1`, [m]);
-          if (done.rows.length) continue;
-          await pgPool.query(migFile(m, true));
-          await pgPool.query(`INSERT INTO schema_migrations (name) VALUES ($1)`, [m]);
-        }
-        console.log('[db] Supabase Postgres schema ready');
-      } else {
-        sqliteDb.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT)`);
-        for (const m of MIGRATIONS) {
-          const done = sqliteDb.prepare(`SELECT 1 FROM schema_migrations WHERE name = ?`).get(m);
-          if (done) continue;
-          sqliteDb.exec(m === '0001_init' ? migFile(m, false) : stripExistingColumns(migFile(m, false)));
-          sqliteDb.prepare(`INSERT INTO schema_migrations (name) VALUES (?)`).run(m);
-        }
+      await pgPool.query(`CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
+      for (const m of MIGRATIONS) {
+        const done = await pgPool.query(`SELECT 1 FROM schema_migrations WHERE name = $1`, [m]);
+        if (done.rows.length) continue;
+        await pgPool.query(migFile(m));
+        await pgPool.query(`INSERT INTO schema_migrations (name) VALUES ($1)`, [m]);
       }
+      console.log('[db] Supabase Postgres schema ready');
     })();
   }
   return _ready;
@@ -172,7 +126,7 @@ function uid(prefix = 'id') {
 
 /** Release pooled connections (pg keeps the event loop alive otherwise). */
 async function closeDb() {
-  if (pgPool) await pgPool.end();
+  await pgPool.end();
 }
 
 module.exports = { get, all, run, exec, withTransaction, nowFn, dayExpr, initDb, uid, isPg, closeDb };

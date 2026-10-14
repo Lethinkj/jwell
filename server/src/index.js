@@ -1,8 +1,11 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
+require('express-async-errors'); // forward async route throws to the error middleware (else one bad query kills the process)
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-const { get, all, initDb, isPg } = require('./db');
+const { get, all, initDb } = require('./db');
 
 const app = express();
 app.use(cors());
@@ -48,7 +51,7 @@ app.get('/api/public/products/:id', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-app.get('/api/health', (req, res) => res.json({ ok: true, db: isPg ? 'supabase-postgres' : 'sqlite', time: new Date().toISOString() }));
+app.get('/api/health', (req, res) => res.json({ ok: true, db: 'supabase-postgres', time: new Date().toISOString() }));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
@@ -68,7 +71,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 4000;
 if (require.main === module) {
   app.ready.then(() => {
-    const srv = app.listen(PORT, () => console.log(`[server] Gold Shop API on http://localhost:${PORT} (db: ${isPg ? 'Supabase Postgres' : 'SQLite local'})`));
+    const srv = app.listen(PORT, () => console.log(`[server] Gold Shop API on http://localhost:${PORT} (db: Supabase Postgres)`));
     srv.on('error', (e) => {
       if (e && e.code === 'EADDRINUSE') {
         console.error(`[server] Port ${PORT} is already in use — kill the old process first:  lsof -ti:${PORT} | xargs kill -9`);

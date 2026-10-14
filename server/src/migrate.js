@@ -1,9 +1,10 @@
 // Applies Supabase (Postgres) migrations in order, tracked in schema_migrations.
 // Usage:
 //   DATABASE_URL="postgresql://postgres:<pw>@db.<ref>.supabase.co:5432/postgres" npm run migrate -w server
-require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
 
 async function main() {
   const url = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
