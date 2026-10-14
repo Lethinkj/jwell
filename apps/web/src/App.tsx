@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, NavLink, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, NavLink, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './hooks/auth';
 import Landing from './pages/Landing';
@@ -7,6 +7,8 @@ import ProductDetail from './pages/ProductDetail';
 import Login from './pages/Login';
 import Dashboard from './pages/admin/Dashboard';
 import Inventory from './pages/admin/Inventory';
+import InventoryNew from './pages/admin/InventoryNew';
+import InventoryReport from './pages/admin/InventoryReport';
 import Billing from './pages/admin/Billing';
 import Barcodes from './pages/admin/Barcodes';
 import Customers from './pages/admin/Customers';
@@ -18,7 +20,7 @@ import Settings from './pages/admin/Settings';
 import AuditLogs from './pages/admin/AuditLogs';
 import { api } from './lib/api';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const qc = new QueryClient();
 
@@ -49,11 +51,15 @@ function PublicNav() {
 function AdminShell({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const loc = useLocation();
+  const inInventory = loc.pathname.startsWith('/admin/inventory');
+  const [invOpen, setInvOpen] = useState(inInventory);
+  useEffect(() => { if (inInventory) setInvOpen(true); }, [inInventory]);
   if (loading) return <div className="main"><div className="skeleton" style={{ height: 120 }} /></div>;
   if (!user) return <Navigate to="/login" replace />;
   const isAdmin = user.role === 'admin';
   const links = isAdmin ? [
-    ['/admin', 'Overview'], ['/admin/billing', 'Billing'], ['/admin/inventory', 'Inventory'],
+    ['/admin', 'Overview'], ['/admin/billing', 'Billing'],
     ['/admin/barcodes', 'Barcode Generator'], ['/admin/customers', 'Customers & CRM'],
     ['/admin/staff', 'Staff Management'], ['/admin/rates', 'Gold Rates'],
     ['/admin/campaigns', 'Offers & Campaigns'], ['/admin/reports', 'Reports'],
@@ -61,11 +67,22 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   ] : [
     ['/admin/billing', 'New Bill'], ['/admin/customers', 'Customer Search'],
   ];
+  const close = () => setOpen(false);
+  const invKids = [
+    ['/admin/inventory', 'Overview'], ['/admin/inventory/new', 'Add Product'], ['/admin/inventory/report', 'Purchase Report'],
+  ];
   return (
     <div className="shell">
       <aside className={`sidebar${open ? ' open' : ''}`}>
         <div className="brand" style={{ color: '#fff', marginBottom: 12 }}>Shree <span style={{ color: 'var(--color-gold)' }}>Gold</span></div>
-        {links.map(([to, label]) => <Link key={to} to={to} onClick={() => setOpen(false)}>{label}</Link>)}
+        {isAdmin ? <>
+          {links.slice(0, 2).map(([to, label]) => <Link key={to} to={to} onClick={close}>{label}</Link>)}
+          <button className={`nav-group${inInventory ? ' active' : ''}`} onClick={() => setInvOpen((o) => !o)} aria-expanded={invOpen}>
+            <span>Inventory</span><span className={`chev${invOpen ? ' open' : ''}`}>‹</span>
+          </button>
+          {invOpen && <div className="nav-sub">{invKids.map(([to, label]) => <Link key={to} to={to} onClick={close}>{label}</Link>)}</div>}
+          {links.slice(2).map(([to, label]) => <Link key={to} to={to} onClick={close}>{label}</Link>)}
+        </> : links.map(([to, label]) => <Link key={to} to={to} onClick={close}>{label}</Link>)}
         <Link to="/shop">← Public site</Link>
         <div style={{ marginTop: 'auto', fontSize: 13, opacity: .8 }}>{user.display_name} • {user.role}<br /><button className="btn ghost" style={{ color: '#fff', borderColor: '#666', marginTop: 8 }} onClick={logout}>Logout</button></div>
       </aside>
@@ -98,6 +115,8 @@ export default function App() {
             <Route path="/admin" element={<AdminShell><RequireAdmin><Dashboard /></RequireAdmin></AdminShell>} />
             <Route path="/admin/billing" element={<AdminShell><Billing /></AdminShell>} />
             <Route path="/admin/inventory" element={<AdminShell><RequireAdmin><Inventory /></RequireAdmin></AdminShell>} />
+            <Route path="/admin/inventory/new" element={<AdminShell><RequireAdmin><InventoryNew /></RequireAdmin></AdminShell>} />
+            <Route path="/admin/inventory/report" element={<AdminShell><RequireAdmin><InventoryReport /></RequireAdmin></AdminShell>} />
             <Route path="/admin/barcodes" element={<AdminShell><RequireAdmin><Barcodes /></RequireAdmin></AdminShell>} />
             <Route path="/admin/customers" element={<AdminShell><Customers /></AdminShell>} />
             <Route path="/admin/staff" element={<AdminShell><RequireAdmin><Staff /></RequireAdmin></AdminShell>} />
