@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, inr } from '../../lib/api';
+import { pieceImage, onImgError } from '../../lib/images';
 
 const PURITIES = ['', '24K', '22K', '18K', '14K'];
 const STATUSES = [['available', 'Available'], ['all', 'All statuses'], ['sold', 'Sold'], ['reserved', 'Reserved'], ['damaged', 'Damaged']];
@@ -27,6 +28,9 @@ export default function Inventory() {
   const rows: any[] = list.data?.data || [];
   const lowCats: string[] = (valuation.data?.data?.low_stock || []).map((l: any) => l.category);
   const isLow = (p: any) => lowCats.includes(p.category_name);
+  const catSlug: Record<string, string> = {};
+  for (const c of cats.data?.data || []) catSlug[c.id] = c.slug;
+  const imgOf = (p: any) => pieceImage({ image_url: p.image_url, category_slug: catSlug[p.category_id] });
 
   const totPieces = list.data?.total ?? rows.length;
   const totGold = rows.reduce((s, p) => s + (Number(p.net_gold_weight_g) || 0), 0);
@@ -75,19 +79,25 @@ export default function Inventory() {
 
       <div className="card" style={{ marginTop: 16 }}>
         <strong>Stock {list.data ? `(${list.data.total} found)` : ''}</strong>
-        <div className="tbl-wrap"><table className="tbl"><thead><tr><th>SKU</th><th>Item</th><th>Purity</th><th>Net g</th><th>Status</th><th>Acq.</th><th></th></tr></thead>
-          <tbody>{rows.map((p: any) => (
-            <tr key={p.id}>
-              <td>{p.sku}</td>
-              <td>{p.name}<br /><small style={{ color: 'var(--color-muted)' }}>{p.category_name || '—'}{p.design_code ? ` • ${p.design_code}` : ''}</small></td>
-              <td>{p.purity}</td>
-              <td>{p.net_gold_weight_g}</td>
-              <td><span className={`badge ${p.status === 'available' ? 'ok' : p.status === 'sold' ? 'err' : 'warn'}`}>{p.status}</span>
-                {isLow(p) && p.status === 'available' && <span className="badge warn" style={{ marginLeft: 4 }}>low stock</span>}</td>
-              <td>{inr(p.acquisition_cost_inr)}</td>
-              <td><Link to={`/admin/inventory/new?id=${p.id}`}>Edit</Link></td>
-            </tr>))}
-          </tbody></table></div>
+        {rows.length === 0 ? <div className="empty">No pieces match — try clearing filters.</div>
+        : <div className="grid catalog" style={{ marginTop: 12 }}>{rows.map((p: any) => (
+          <div key={p.id} className="tile">
+            <div style={{ position: 'relative' }}>
+              <img src={imgOf(p)} alt={p.name} loading="lazy" onError={(e) => onImgError(e, p.sku)} />
+              {isLow(p) && p.status === 'available' && (
+                <span className="badge warn" style={{ position: 'absolute', top: 8, left: 8 }}>⚠ low stock</span>)}
+              <span className={`badge ${p.status === 'available' ? 'ok' : p.status === 'sold' ? 'err' : 'warn'}`}
+                style={{ position: 'absolute', top: 8, right: 8 }}>{p.status}</span>
+            </div>
+            <div className="pad">
+              <strong>{p.name}</strong><br />
+              <small style={{ color: 'var(--color-muted)' }}>{p.sku} • {p.category_name || '—'} • {p.purity} • {p.net_gold_weight_g} g</small>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                <span style={{ fontWeight: 700 }}>{inr(p.acquisition_cost_inr)}</span>
+                <Link to={`/admin/inventory/new?id=${p.id}`}>Edit</Link>
+              </div>
+            </div>
+          </div>))}</div>}
       </div>
     </div>
   );
