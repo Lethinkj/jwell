@@ -10,7 +10,7 @@
     "start": "node src/index.js",
     "seed": "node src/seed.js",
     "migrate": "node src/migrate.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --env-file=.env --test test/*.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

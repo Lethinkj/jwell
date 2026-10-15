@@ -7,12 +7,13 @@ type Props = {
   /** When set, the same code is ignored for this long (ms) — stops camera double-adds. */
   dedupeMs?: number;
   title?: string;
+  onManualEntry?: () => void;
 };
 
 /** Camera barcode scanner: native BarcodeDetector fast-path, @zxing fallback.
  *  Permission is requested only after the user opens this modal. Tracks are
  *  released on close/unmount. Never uploads or stores frames. */
-export default function ScannerModal({ onDetect, onClose, dedupeMs = 2500, title = 'Scan barcode' }: Props) {
+export default function ScannerModal({ onDetect, onClose, dedupeMs = 2500, title = 'Scan barcode', onManualEntry }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastRef = useRef<{ value: string; at: number }>({ value: '', at: 0 });
   const onDetectRef = useRef(onDetect);
@@ -76,14 +77,31 @@ export default function ScannerModal({ onDetect, onClose, dedupeMs = 2500, title
             </div>
             <p style={{ color: 'var(--color-muted)', fontSize: 13 }}>{status}</p>
             {devices.length > 1 && (
-              <select value={deviceId || ''} onChange={(e) => setDeviceId(e.target.value || undefined)} aria-label="Choose camera">
+              <select value={deviceId || ''} onChange={(e) => setDeviceId(e.target.value || undefined)} aria-label="Choose camera" style={{ marginTop: 8 }}>
                 <option value="">Auto (rear preferred)</option>
                 {devices.map((d) => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
               </select>
             )}
           </>
         )}
-        <p style={{ color: 'var(--color-muted)', fontSize: 12 }}>Tip: USB/Bluetooth scanners and manual entry keep working alongside the camera.</p>
+        {onManualEntry && (
+          <div style={{ marginTop: 14 }}>
+            <button
+              className="btn gold"
+              onClick={() => {
+                onClose();
+                onManualEntry();
+              }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, padding: '10px 14px' }}
+            >
+              <span>✍️</span>
+              <span>Manual Entry (Enter Piece Details)</span>
+            </button>
+          </div>
+        )}
+        <p style={{ color: 'var(--color-muted)', fontSize: 12, marginTop: 10, marginBottom: 0 }}>
+          Tip: You can scan with camera, use a barcode gun, or click Manual Entry above.
+        </p>
       </div>
     </div>
   );

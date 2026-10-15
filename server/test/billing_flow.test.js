@@ -173,3 +173,61 @@ test('flow: barcode estimate -> draft -> finalize with edited final price overri
   assert.equal(custCheck.data.data.purchases.length, 1);
   assert.equal(custCheck.data.data.purchases[0].id, saleId);
 });
+
+test('flow: manual jewellery piece entry -> draft -> finalize with custom price and verify in sales history', async () => {
+  const testPhone = `91234${Date.now().toString().slice(-5)}`;
+
+  // 1. Register customer
+  const custRes = await req('POST', '/customers', {
+    name: 'Suresh Patel',
+    phone: testPhone,
+    email: 'suresh@example.com',
+    birthday: '1988-06-15',
+  });
+  assert.equal(custRes.status, 201);
+  const custId = custRes.data.data.id;
+
+  // 2. Draft sale with manual item entry
+  const manualSku = `MAN-${Date.now().toString().slice(-4)}`;
+  const draft = await req('POST', '/sales/draft', {
+    customer_id: custId,
+    lines: [
+      {
+        sku: manualSku,
+        manual_item: {
+          name: 'Handcrafted Antique Kada',
+          sku: manualSku,
+          purity: '22K',
+          gross_weight_g: 25.5,
+          net_gold_weight_g: 25.0,
+          making_charge_type: 'percentage',
+          making_charge_value: 12,
+          stone_value_inr: 500,
+          wastage_charge_inr: 0,
+          other_charges_inr: 0,
+        },
+      },
+    ],
+  });
+  assert.equal(draft.status, 201);
+  const saleId = draft.data.data.id;
+
+  // 3. Finalize with custom agreed price
+  const agreedPrice = 210000;
+  const finalize = await req('POST', `/sales/${saleId}/finalize`, {
+    custom_final_price_inr: agreedPrice,
+    payments: [{ method: 'card', amount_inr: agreedPrice }],
+  });
+  assert.equal(finalize.status, 200);
+  assert.equal(finalize.data.data.total_inr, agreedPrice);
+  assert.equal(finalize.data.data.status, 'finalized');
+
+  // 4. Check history listing contains customer phone and invoice
+  const history = await req('GET', `/sales?q=${encodeURIComponent(testPhone)}`);
+  assert.equal(history.status, 200);
+  assert.equal(history.data.data.length, 1);
+  assert.equal(history.data.data[0].id, saleId);
+  assert.equal(history.data.data[0].customer_name, 'Suresh Patel');
+  assert.equal(history.data.data[0].customer_phone, testPhone);
+});
+

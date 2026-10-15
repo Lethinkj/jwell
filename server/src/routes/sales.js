@@ -46,12 +46,36 @@ router.post('/sales/draft', requireRoles('admin', 'billing'), async (req, res) =
       await tx.run(`INSERT INTO sales (id, shop_id, invoice_no, customer_id, sold_at, subtotal_inr, total_inr, status, created_by)
         VALUES (?,?,?,?,${nowFn()},0,0,'draft',?)`, id, req.user.shop_id, `DRAFT-${id.slice(-6)}`, customer ? customer.id : null, req.user.user_id);
       for (const l of lines) {
-        const prod = await tx.get('SELECT * FROM products WHERE id=?', l.product_id);
-        if (!prod) throw new Error(`product ${l.product_id} not found`);
-        if (prod.status !== 'available') throw new Error(`${prod.sku} is ${prod.status} — cannot bill`);
-        await tx.run(`UPDATE products SET status='reserved' WHERE id=? AND status='available'`, l.product_id);
-        const chk = await tx.get('SELECT status FROM products WHERE id=?', l.product_id);
-        if (chk.status !== 'reserved') throw new Error(`${prod.sku} was just taken by another sale`);
+        let prod = l.product_id ? await tx.get('SELECT * FROM products WHERE id=?', l.product_id) : null;
+        if (!prod && l.sku) {
+          prod = await tx.get('SELECT * FROM products WHERE sku=? AND shop_id=?', l.sku, req.user.shop_id);
+          if (prod) l.product_id = prod.id;
+        }
+        if (!prod && l.manual_item) {
+          const prdId = uid('prd');
+          const cat = await tx.get('SELECT id FROM categories WHERE shop_id=? LIMIT 1', req.user.shop_id);
+          const m = l.manual_item;
+          const sku = (m.sku || `MAN-${Date.now().toString().slice(-6)}`).trim();
+          await tx.run(`INSERT INTO products (id, shop_id, category_id, sku, name, purity, gross_weight_g, stone_weight_g,
+            net_gold_weight_g, making_charge_type, making_charge_value, stone_value_inr, wastage_charge_inr, other_charges_inr,
+            acquisition_cost_inr, status)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            prdId, req.user.shop_id, cat ? cat.id : null, sku, m.name || 'Custom Jewellery', m.purity || '22K',
+            Number(m.gross_weight_g) || Number(m.net_gold_weight_g) || 1, Number(m.stone_weight_g) || 0,
+            Number(m.net_gold_weight_g) || 1, m.making_charge_type || 'percentage', Number(m.making_charge_value) || 10,
+            Number(m.stone_value_inr) || 0, Number(m.wastage_charge_inr) || 0, Number(m.other_charges_inr) || 0, 0, 'reserved');
+          await tx.run(`INSERT INTO product_barcodes (id, product_id, shop_id, barcode_value) VALUES (?,?,?,?)`,
+            uid('bc'), prdId, req.user.shop_id, sku);
+          prod = await tx.get('SELECT * FROM products WHERE id=?', prdId);
+          l.product_id = prdId;
+        }
+        if (!prod) throw new Error(`product ${l.product_id || l.sku || ''} not found`);
+        if (prod.status !== 'reserved') {
+          if (prod.status !== 'available') throw new Error(`${prod.sku} is ${prod.status} — cannot bill`);
+          await tx.run(`UPDATE products SET status='reserved' WHERE id=? AND status='available'`, l.product_id);
+          const chk = await tx.get('SELECT status FROM products WHERE id=?', l.product_id);
+          if (chk.status !== 'reserved') throw new Error(`${prod.sku} was just taken by another sale`);
+        }
         await tx.run(`INSERT INTO sale_items (id, sale_id, product_id, sku, name, purity, net_gold_weight_g, rate_24k_per_g_inr, gold_value_inr, making_charge_inr, line_total_inr)
           VALUES (?,?,?,?,?,?,?,?,?,?,?)`, uid('sit'), id, prod.id, prod.sku, prod.name, prod.purity, prod.net_gold_weight_g, 0, 0, 0, 0);
         await tx.run(`INSERT INTO stock_movements (id, product_id, movement_type, qty_delta, reference_type, reference_id, reason, actor_id)
@@ -140,9 +164,9 @@ router.get('/sales', async (req, res) => {
   if (req.user.role === 'billing') { conds.push('s.created_by = ?'); args.push(req.user.user_id); }
   if (from) { conds.push('s.sold_at >= ?'); args.push(from); }
   if (to) { conds.push('s.sold_at <= ?'); args.push(to); }
-  if (q) { conds.push('(s.invoice_no LIKE ? OR c.name LIKE ?)'); args.push(`%${q}%`, `%${q}%`); }
+  if (q) { conds.push('(s.invoice_no LIKE ? OR c.name LIKE ? OR c.phone LIKE ?)'); args.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   const off = (Number(page) - 1) * Number(limit);
-  const rows = await all(`SELECT s.*, c.name AS customer_name FROM sales s LEFT JOIN customers c ON c.id=s.customer_id
+  const rows = await all(`SELECT s.*, c.name AS customer_name, c.phone AS customer_phone, c.customer_code FROM sales s LEFT JOIN customers c ON c.id=s.customer_id
     WHERE ${conds.join(' AND ')} ORDER BY s.sold_at DESC LIMIT ? OFFSET ?`, ...args, Number(limit), off);
   res.json({ data: rows });
 });

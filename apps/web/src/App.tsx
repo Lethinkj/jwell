@@ -18,6 +18,7 @@ import Campaigns from './pages/admin/Campaigns';
 import Reports from './pages/admin/Reports';
 import Settings from './pages/admin/Settings';
 import AuditLogs from './pages/admin/AuditLogs';
+import AdminBreadcrumbs from './components/AdminBreadcrumbs';
 import { api } from './lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
@@ -54,20 +55,25 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   const loc = useLocation();
   const inInventory = loc.pathname.startsWith('/admin/inventory');
   const [invOpen, setInvOpen] = useState(inInventory);
+  const inBilling = loc.pathname.startsWith('/admin/billing');
+  const [billingOpen, setBillingOpen] = useState<boolean>(true);
   useEffect(() => { if (inInventory) setInvOpen(true); }, [inInventory]);
+  useEffect(() => { if (inBilling) setBillingOpen(true); }, [inBilling]);
   if (loading) return <div className="main"><div className="skeleton" style={{ height: 120 }} /></div>;
   if (!user) return <Navigate to="/login" replace />;
   const isAdmin = user.role === 'admin';
-  const links = isAdmin ? [
-    ['/admin', 'Overview'], ['/admin/billing', 'Billing'],
+  const links = [
+    ['/admin', 'Overview'],
     ['/admin/barcodes', 'Barcode Generator'], ['/admin/customers', 'Customers & CRM'],
     ['/admin/staff', 'Staff Management'], ['/admin/rates', 'Gold Rates'],
     ['/admin/campaigns', 'Offers & Campaigns'], ['/admin/reports', 'Reports'],
     ['/admin/settings', 'Settings'], ['/admin/audit', 'Audit Logs'],
-  ] : [
-    ['/admin/billing', 'New Bill'], ['/admin/customers', 'Customer Search'],
   ];
   const close = () => setOpen(false);
+  const billingKids = [
+    ['/admin/billing/new', 'New Bill'],
+    ['/admin/billing/history', 'Billing History'],
+  ];
   const invKids = [
     ['/admin/inventory', 'Overview'], ['/admin/inventory/new', 'Add Product'], ['/admin/inventory/report', 'Purchase Report'],
   ];
@@ -76,18 +82,66 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       <aside className={`sidebar${open ? ' open' : ''}`}>
         <div className="brand" style={{ color: '#fff', marginBottom: 12 }}>Shree <span style={{ color: 'var(--color-gold)' }}>Gold</span></div>
         {isAdmin ? <>
-          {links.slice(0, 2).map(([to, label]) => <Link key={to} to={to} onClick={close}>{label}</Link>)}
-          <button className={`nav-group${inInventory ? ' active' : ''}`} onClick={() => setInvOpen((o) => !o)} aria-expanded={invOpen}>
+          <NavLink to="/admin" end className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>Overview</NavLink>
+          <button type="button" className={`nav-group${inBilling ? ' active' : ''}`} onClick={() => setBillingOpen((o) => !o)} aria-expanded={billingOpen}>
+            <span>Billing</span><span className={`chev${billingOpen ? ' open' : ''}`}>‹</span>
+          </button>
+          {billingOpen && (
+            <div className="nav-sub">
+              {billingKids.map(([to, label]) => (
+                <NavLink key={to} to={to} className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
+                  {label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+          <button type="button" className={`nav-group${inInventory ? ' active' : ''}`} onClick={() => setInvOpen((o) => !o)} aria-expanded={invOpen}>
             <span>Inventory</span><span className={`chev${invOpen ? ' open' : ''}`}>‹</span>
           </button>
-          {invOpen && <div className="nav-sub">{invKids.map(([to, label]) => <Link key={to} to={to} onClick={close}>{label}</Link>)}</div>}
-          {links.slice(2).map(([to, label]) => <Link key={to} to={to} onClick={close}>{label}</Link>)}
-        </> : links.map(([to, label]) => <Link key={to} to={to} onClick={close}>{label}</Link>)}
+          {invOpen && (
+            <div className="nav-sub">
+              {invKids.map(([to, label]) => (
+                <NavLink key={to} to={to} end={to === '/admin/inventory'} className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
+                  {label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+          {links.slice(1).map(([to, label]) => (
+            <NavLink key={to} to={to} className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
+              {label}
+            </NavLink>
+          ))}
+        </> : <>
+          <button type="button" className={`nav-group${inBilling ? ' active' : ''}`} onClick={() => setBillingOpen((o) => !o)} aria-expanded={billingOpen}>
+            <span>Billing</span><span className={`chev${billingOpen ? ' open' : ''}`}>‹</span>
+          </button>
+          {billingOpen && (
+            <div className="nav-sub">
+              {billingKids.map(([to, label]) => (
+                <NavLink key={to} to={to} className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
+                  {label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+          <NavLink to="/admin/customers" className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
+            Customer Search
+          </NavLink>
+        </>}
         <Link to="/shop">← Public site</Link>
         <div style={{ marginTop: 'auto', fontSize: 13, opacity: .8 }}>{user.display_name} • {user.role}<br /><button className="btn ghost" style={{ color: '#fff', borderColor: '#666', marginTop: 8 }} onClick={logout}>Logout</button></div>
       </aside>
       <div className="main">
-        <button className="btn ghost" style={{ marginBottom: 12 }} onClick={() => setOpen(!open)}>☰ Menu</button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <button className="btn ghost" style={{ padding: '6px 12px' }} onClick={() => setOpen(!open)}>☰ Menu</button>
+            <AdminBreadcrumbs />
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>
+            {user.role === 'admin' ? '🛡️ Admin' : '💼 Billing'} • {user.display_name}
+          </div>
+        </div>
         {children}
       </div>
     </div>
@@ -113,7 +167,9 @@ export default function App() {
             <Route path="/shop/:id" element={<><PublicNav /><ProductDetail /></>} />
             <Route path="/login" element={<><PublicNav /><Login /></>} />
             <Route path="/admin" element={<AdminShell><RequireAdmin><Dashboard /></RequireAdmin></AdminShell>} />
-            <Route path="/admin/billing" element={<AdminShell><Billing /></AdminShell>} />
+            <Route path="/admin/billing" element={<Navigate to="/admin/billing/new" replace />} />
+            <Route path="/admin/billing/new" element={<AdminShell><Billing mode="new" /></AdminShell>} />
+            <Route path="/admin/billing/history" element={<AdminShell><Billing mode="history" /></AdminShell>} />
             <Route path="/admin/inventory" element={<AdminShell><RequireAdmin><Inventory /></RequireAdmin></AdminShell>} />
             <Route path="/admin/inventory/new" element={<AdminShell><RequireAdmin><InventoryNew /></RequireAdmin></AdminShell>} />
             <Route path="/admin/inventory/report" element={<AdminShell><RequireAdmin><InventoryReport /></RequireAdmin></AdminShell>} />
