@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, inr } from '../../lib/api';
+import InvoiceModal from '../../components/InvoiceModal';
+import { downloadInvoicePdf } from '../../lib/invoicePdf';
 
 export default function Customers() {
   const [q, setQ] = useState('');
@@ -10,6 +12,8 @@ export default function Customers() {
   const [lastTo, setLastTo] = useState('');
   const [sel, setSel] = useState<any>(null);
   const [msg, setMsg] = useState('');
+  const [previewSaleId, setPreviewSaleId] = useState<string | null>(null);
+  const [downloadingSaleId, setDownloadingSaleId] = useState<string | null>(null);
   const extra = recency === 'repeat' ? '&repeat=1'
     : recency.startsWith('last:') ? `&last_days=${recency.slice(5)}`
     : recency.startsWith('lapsed:') ? `&lapsed_days=${recency.slice(7)}`
@@ -63,14 +67,69 @@ export default function Customers() {
               <h3 style={{ marginTop: 0 }}>{detail.data.data.name} <small style={{ color: 'var(--color-muted)' }}>{detail.data.data.customer_code}</small></h3>
               <p>{detail.data.data.phone} • {detail.data.data.email || 'no email'} • {detail.data.data.birthday ? `🎂 ${detail.data.data.birthday}` : ''} {detail.data.data.anniversary ? `💍 ${detail.data.data.anniversary}` : ''}</p>
               <strong>Purchases ({detail.data.data.purchases.length})</strong>
-              <table className="tbl"><thead><tr><th>Invoice</th><th>Date</th><th>Total</th></tr></thead><tbody>
-                {detail.data.data.purchases.map((s: any) => <tr key={s.id}><td>{s.invoice_no}</td><td>{s.sold_at?.slice(0, 10)}</td><td>{inr(s.total_inr)}</td></tr>)}
-              </tbody></table>
+              <div style={{ overflowX: 'auto', margin: '8px 0 16px' }}>
+                <table className="tbl" style={{ width: '100%' }}>
+                  <thead>
+                    <tr>
+                      <th>Invoice</th>
+                      <th>Date</th>
+                      <th>Total</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detail.data.data.purchases.map((s: any) => (
+                      <tr key={s.id}>
+                        <td><strong>{s.invoice_no}</strong></td>
+                        <td>{s.sold_at?.slice(0, 10)}</td>
+                        <td style={{ fontWeight: 600 }}>{inr(s.total_inr)}</td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                            <button
+                              className="btn ghost"
+                              onClick={() => setPreviewSaleId(s.id)}
+                              style={{ padding: '2px 8px', fontSize: 11 }}
+                              title="View bill"
+                            >
+                              👁️ View
+                            </button>
+                            <button
+                              className="btn ghost"
+                              onClick={async () => {
+                                try {
+                                  setDownloadingSaleId(s.id);
+                                  const res = await api.get(`/sales/${s.id}`);
+                                  downloadInvoicePdf(res.data);
+                                } catch (e: any) {
+                                  alert(`Download failed: ${e.message}`);
+                                } finally {
+                                  setDownloadingSaleId(null);
+                                }
+                              }}
+                              disabled={downloadingSaleId === s.id}
+                              style={{ padding: '2px 8px', fontSize: 11 }}
+                              title="Download PDF"
+                            >
+                              {downloadingSaleId === s.id ? '...' : '📥 PDF'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <strong>Consent history</strong>
               <ul>{detail.data.data.consent.map((c: any) => <li key={c.id}><small>{c.created_at?.slice(0, 10)} — {c.status} ({c.source})</small></li>)}</ul>
             </div>)}
         </div>
       </div>
+      {previewSaleId && (
+        <InvoiceModal
+          saleId={previewSaleId}
+          onClose={() => setPreviewSaleId(null)}
+        />
+      )}
     </div>
   );
 }

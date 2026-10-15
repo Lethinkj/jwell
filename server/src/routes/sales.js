@@ -68,7 +68,7 @@ router.post('/sales/:id/finalize', requireRoles('admin', 'billing'), async (req,
   const sale = await get('SELECT * FROM sales WHERE id=?', req.params.id);
   if (!sale) return res.status(404).json({ error: 'not_found' });
   if (sale.status === 'finalized') return res.status(409).json({ error: 'already_finalized' });
-  const { payments = [], tax_rate_pct = 3 } = req.body || {};
+  const { payments = [], tax_rate_pct = 3, discount_inr: overall_discount_inr, custom_final_price_inr } = req.body || {};
   if (!payments.length) return res.status(400).json({ error: 'bad_request', message: 'payments required' });
   const rate = await currentRate();
   if (!rate) return res.status(409).json({ error: 'no_rate' });
@@ -102,18 +102,30 @@ router.post('/sales/:id/finalize', requireRoles('admin', 'billing'), async (req,
           VALUES (?,?,?,?,?,?,?,?,?)`, uid('stm'), prod.id, 'sale', -1, -prod.net_gold_weight_g, 'sale', sale.id, 'finalized sale', req.user.user_id);
         if (reqLine.offer_code) await tx.run('UPDATE offers SET redeemed = redeemed + 1 WHERE code=?', reqLine.offer_code);
       }
-      if (Math.abs(paid - total) > 1) throw new Error(`Payments ₹${paid} do not match total ₹${total.toFixed(2)}`);
+
+      let finalTotal = total;
+      let totalDiscount = discount;
+      if (custom_final_price_inr !== undefined && custom_final_price_inr !== null && !isNaN(Number(custom_final_price_inr))) {
+        finalTotal = Math.max(0, Math.round(Number(custom_final_price_inr) * 100) / 100);
+        totalDiscount = Math.max(0, Math.round(((subtotal + tax) - finalTotal) * 100) / 100);
+      } else if (overall_discount_inr !== undefined && overall_discount_inr !== null && !isNaN(Number(overall_discount_inr))) {
+        const extraDisc = Math.max(0, Number(overall_discount_inr));
+        totalDiscount = discount + extraDisc;
+        finalTotal = Math.max(0, Math.round((total - extraDisc) * 100) / 100);
+      }
+
+      if (Math.abs(paid - finalTotal) > 1) throw new Error(`Payments ₹${paid} do not match total ₹${finalTotal.toFixed(2)}`);
       const inv = await nextInvoiceNo(tx);
       await tx.run(`UPDATE sales SET invoice_no=?, subtotal_inr=?, discount_inr=?, tax_inr=?, total_inr=?, status='finalized',
         sold_at=${nowFn()}, rate_snapshot_id=?, rate_24k_per_g_inr=? WHERE id=?`,
-        inv, subtotal, discount, tax, total, rate.id, rate.rate_24k_per_g_inr, sale.id);
+        inv, subtotal, totalDiscount, tax, finalTotal, rate.id, rate.rate_24k_per_g_inr, sale.id);
       for (const p of payments) {
         await tx.run('INSERT INTO payments (id, sale_id, method, amount_inr, reference) VALUES (?,?,?,?,?)',
           uid('pay'), sale.id, p.method, p.amount_inr, p.reference || null);
       }
       if (sale.customer_id) {
         await tx.run(`UPDATE customers SET total_spent_inr = total_spent_inr + ?, purchase_count = purchase_count + 1, last_purchase_at = ${nowFn()} WHERE id=?`,
-          total, sale.customer_id);
+          finalTotal, sale.customer_id);
       }
     });
   } catch (e) { return res.status(409).json({ error: 'finalize_failed', message: e.message }); }
@@ -135,9 +147,15 @@ router.get('/sales', async (req, res) => {
   res.json({ data: rows });
 });
 router.get('/sales/:id', async (req, res) => {
-  const sale = await get(`SELECT s.*, c.name AS customer_name, c.phone AS customer_phone FROM sales s LEFT JOIN customers c ON c.id=s.customer_id WHERE s.id=? AND s.shop_id=?`, req.params.id, req.user.shop_id);
+  const sale = await get(`SELECT s.*, c.name AS customer_name, c.phone AS customer_phone, c.email AS customer_email, c.customer_code,
+    c.birthday AS customer_birthday, c.anniversary AS customer_anniversary,
+    c.address_line1 AS customer_address_line1, c.city AS customer_city, c.state AS customer_state, c.postal_code AS customer_postal_code,
+    sh.name AS shop_name, sh.settings AS shop_settings, sh.currency AS shop_currency
+    FROM sales s
+    LEFT JOIN customers c ON c.id=s.customer_id
+    LEFT JOIN shops sh ON sh.id=s.shop_id
+    WHERE s.id=? AND s.shop_id=?`, req.params.id, req.user.shop_id);
   if (!sale) return res.status(404).json({ error: 'not_found' });
-  if (req.user.role === 'billing' && sale.created_by !== req.user.user_id) return res.status(404).json({ error: 'not_found' });
   res.json({ data: { ...sale, lines: await all('SELECT * FROM sale_items WHERE sale_id=?', sale.id), payments: await all('SELECT * FROM payments WHERE sale_id=?', sale.id) } });
 });
 

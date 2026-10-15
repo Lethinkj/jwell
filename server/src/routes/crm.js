@@ -20,7 +20,10 @@ router.get('/customers/phone/:phone', async (req, res) => {
   const matches = await all('SELECT * FROM customers WHERE shop_id = ? AND (normalized_phone = ? OR phone = ?)',
     req.user.shop_id, norm, req.params.phone);
   const data = [];
-  for (const m of matches) data.push({ ...m, summary: await customerSummary(m) });
+  for (const m of matches) {
+    const purchases = await all(`SELECT s.* FROM sales s WHERE s.customer_id = ? AND s.status = 'finalized' ORDER BY s.sold_at DESC LIMIT 20`, m.id);
+    data.push({ ...m, summary: await customerSummary(m), purchases });
+  }
   res.json({ data, normalized: norm });
 });
 
