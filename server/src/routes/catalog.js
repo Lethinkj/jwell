@@ -142,11 +142,21 @@ router.get('/products/:id/label', async (req, res) => {
   } });
 });
 
-router.get('/products/:id', async (req, res) => {  const row = await get(`SELECT p.*, c.name AS category_name FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE p.id=?`, req.params.id);
+router.get('/products/:id', async (req, res) => {  const row = await get(`SELECT p.*, c.name AS category_name, c.slug AS category_slug FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE p.id=?`, req.params.id);
   if (!row) return res.status(404).json({ error: 'not_found' });
   const barcodes = await all('SELECT * FROM product_barcodes WHERE product_id=?', req.params.id);
   const movements = await all('SELECT * FROM stock_movements WHERE product_id=? ORDER BY created_at DESC LIMIT 50', req.params.id);
-  res.json({ data: { ...row, barcodes, movements } });
+  // Sale history for this unique piece — full invoice on demand via GET /sales/:id.
+  const sales = await all(`SELECT s.id, s.invoice_no, s.status AS sale_status, s.sold_at, s.created_at,
+      s.total_inr, si.id AS sale_item_id, si.line_total_inr, si.purity AS sold_purity,
+      si.net_gold_weight_g AS sold_net_gold_weight_g, si.rate_24k_per_g_inr AS sold_rate_24k_per_g_inr,
+      si.gold_value_inr, si.making_charge_inr, si.stone_value_inr, si.wastage_charge_inr, si.other_charges_inr,
+      si.discount_inr, si.tax_inr, si.offer_code,
+      c.name AS customer_name, c.phone AS customer_phone, c.customer_code
+    FROM sale_items si JOIN sales s ON s.id = si.sale_id
+    LEFT JOIN customers c ON c.id = s.customer_id
+    WHERE si.product_id = ? ORDER BY s.sold_at DESC LIMIT 20`, req.params.id);
+  res.json({ data: { ...row, barcodes, movements, sales } });
 });
 
 router.patch('/products/:id', requireRoles('admin'), async (req, res) => {

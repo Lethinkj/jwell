@@ -81,7 +81,8 @@ export default function Inventory() {
         <strong>Stock {list.data ? `(${list.data.total} found)` : ''}</strong>
         {rows.length === 0 ? <div className="empty">No pieces match — try clearing filters.</div>
         : <div className="grid catalog" style={{ marginTop: 12 }}>{rows.map((p: any) => (
-          <div key={p.id} className="tile">
+          <Link key={p.id} to={`/admin/inventory/${p.id}`} className="tile"
+            style={{ textDecoration: 'none', color: 'inherit' }} title="View details & sale">
             <div style={{ position: 'relative' }}>
               <img src={imgOf(p)} alt={p.name} loading="lazy" onError={(e) => onImgError(e, p.sku)} />
               {isLow(p) && p.status === 'available' && (
@@ -94,10 +95,10 @@ export default function Inventory() {
               <small style={{ color: 'var(--color-muted)' }}>{p.sku} • {p.category_name || '—'} • {p.purity} • {p.net_gold_weight_g} g</small>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
                 <span style={{ fontWeight: 700 }}>{inr(p.acquisition_cost_inr)}</span>
-                <Link to={`/admin/inventory/new?id=${p.id}`}>Edit</Link>
+                <small style={{ color: 'var(--color-gold-deep)', fontWeight: 600 }}>View details →</small>
               </div>
             </div>
-          </div>))}</div>}
+          </Link>))}</div>}
       </div>
     </div>
   );
