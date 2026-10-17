@@ -59,8 +59,8 @@ before(async () => {
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, prodId, shopId, cat, 'TST-1', 'Test Ring', '22K', 5, 4.8, 'percentage', 10, 40000, 'available');
   await run(`INSERT INTO product_barcodes (id, product_id, shop_id, barcode_value) VALUES (?,?,?,?)`, uid('bc'), prodId, shopId, 'TST-1');
   custId = uid('cus');
-  await run(`INSERT INTO customers (id, shop_id, customer_code, name, phone, normalized_phone) VALUES (?,?,?,?,?,?)`,
-    custId, shopId, 'C00001', 'Test Customer', '9876500001', '9876500001');
+  await run(`INSERT INTO customers (id, shop_id, customer_code, name, phone, normalized_phone, address_line1, city, state, postal_code) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    custId, shopId, 'C00001', 'Test Customer', '9876500001', '9876500001', '1 Test St', 'Bengaluru', 'KA', '560001');
 
   const srv = app.listen(0);
   base = `http://localhost:${srv.address().port}/api`;
@@ -134,7 +134,7 @@ test('phone-first lookup: normalized variants match; duplicates flagged not merg
     assert.equal(r.status, 200);
     assert.ok(r.body.data.some((c) => c.id === custId), `variant ${v} should match`);
   }
-  const dup = await api('POST', '/customers', billTok, { name: 'Dup', phone: '+91-98765-00001' });
+  const dup = await api('POST', '/customers', billTok, { name: 'Dup', phone: '+91-98765-00001', address_line1: '1 Test St', city: 'Bengaluru', state: 'KA', postal_code: '560001' });
   assert.equal(dup.status, 409);
 });
 

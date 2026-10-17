@@ -91,15 +91,15 @@ async function main() {
   }
   if (!(await get('SELECT COUNT(*) n FROM customers')).n) {
     const seed = [
-      ['Asha Reddy', '9876500001', 'asha@example.com', '1990-05-14', null, 1, 185000, 3],
-      ['Meera Iyer', '9876500002', 'meera@example.com', null, '2018-11-02', 1, 96000, 2],
-      ['Kavya Nair', '9876500003', null, '1988-12-25', null, 0, 42000, 1],
+      ['Asha Reddy', '9876500001', 'asha@example.com', '1990-05-14', null, 1, 185000, 3, '12 Lavelle Road', 'Bengaluru', 'KA', '560001'],
+      ['Meera Iyer', '9876500002', 'meera@example.com', null, '2018-11-02', 1, 96000, 2, '8 Church Street', 'Bengaluru', 'KA', '560001'],
+      ['Kavya Nair', '9876500003', null, '1988-12-25', null, 0, 42000, 1, '21 Brigade Road', 'Bengaluru', 'KA', '560025'],
     ];
     for (let i = 0; i < seed.length; i++) {
-      const [nm, ph, em, bdd, ann, con, sp, c] = seed[i];
+      const [nm, ph, em, bdd, ann, con, sp, c, a1, city, st, pin] = seed[i];
       const id = uid('cus');
-      await run(`INSERT INTO customers (id, shop_id, customer_code, name, phone, normalized_phone, email, birthday, anniversary, marketing_consent, total_spent_inr, purchase_count)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, id, shop.id, `C${String(i + 1).padStart(5, '0')}`, nm, ph, normalizePhone(ph), em, bdd, ann, con, sp, c);
+      await run(`INSERT INTO customers (id, shop_id, customer_code, name, phone, normalized_phone, email, birthday, anniversary, marketing_consent, total_spent_inr, purchase_count, address_line1, city, state, postal_code)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, id, shop.id, `C${String(i + 1).padStart(5, '0')}`, nm, ph, normalizePhone(ph), em, bdd, ann, con, sp, c, a1, city, st, pin);
     }
     // Backfill normalization for pre-existing rows (shared numbers kept as-is — never auto-merged)
     const missing = await all('SELECT id, phone FROM customers WHERE normalized_phone IS NULL');

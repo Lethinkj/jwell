@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, inr } from '../../lib/api';
 import ScannerModal from '../../components/ScannerModal';
@@ -12,10 +12,27 @@ interface CustomerForm {
   name: string;
   phone: string;
   email: string;
+  address_line1: string;
+  city: string;
+  state: string;
+  postal_code: string;
   birthday: string;
   anniversary: string;
   marketing_consent: boolean;
 }
+
+const emptyCustomerForm: CustomerForm = {
+  name: '',
+  phone: '',
+  email: '',
+  address_line1: '',
+  city: '',
+  state: '',
+  postal_code: '',
+  birthday: '',
+  anniversary: '',
+  marketing_consent: true,
+};
 
 interface BillingProps {
   mode?: 'new' | 'history';
@@ -39,14 +56,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
   const [showPastBills, setShowPastBills] = useState(false);
 
   // New Customer Form State (All mandatory except anniversary)
-  const [customerForm, setCustomerForm] = useState<CustomerForm>({
-    name: '',
-    phone: '',
-    email: '',
-    birthday: '',
-    anniversary: '',
-    marketing_consent: true,
-  });
+  const [customerForm, setCustomerForm] = useState<CustomerForm>(emptyCustomerForm);
   const [customerFormErrors, setCustomerFormErrors] = useState<Record<string, string>>({});
 
   // Step 2: Barcode / Products / Manual Entry
@@ -83,17 +93,35 @@ export default function Billing({ mode = 'new' }: BillingProps) {
   const [historySearch, setHistorySearch] = useState('');
   const [historyFrom, setHistoryFrom] = useState('');
   const [historyTo, setHistoryTo] = useState('');
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyLimit, setHistoryLimit] = useState(10);
   const historyQuery = useQuery({
-    queryKey: ['billing-history', historySearch, historyFrom, historyTo],
+    queryKey: ['billing-history', historySearch, historyFrom, historyTo, historyPage, historyLimit],
     queryFn: () => {
       const params = new URLSearchParams();
       if (historySearch) params.set('q', historySearch);
       if (historyFrom) params.set('from', historyFrom);
       if (historyTo) params.set('to', historyTo);
-      params.set('limit', '50');
+      params.set('page', String(historyPage));
+      params.set('limit', String(historyLimit));
       return api.get(`/sales?${params.toString()}`);
     },
   });
+  const historyTotal = historyQuery.data?.total ?? 0;
+  const historyTotalPages = Math.max(1, Math.ceil(historyTotal / historyLimit));
+  const historyPageNumbers: (number | '...')[] = (() => {
+    const total = historyTotalPages;
+    const cur = historyPage;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | '...')[] = [1];
+    const start = Math.max(2, cur - 1);
+    const end = Math.min(total - 1, cur + 1);
+    if (start > 2) pages.push('...');
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < total - 1) pages.push('...');
+    pages.push(total);
+    return pages;
+  })();
 
   // Calculate Base Line Totals
   const totalNetGoldWeight = lines.reduce((s, l) => s + (l.net_gold_weight_g || 0), 0);
@@ -166,14 +194,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
       const data = res.data || [];
       if (!data.length) {
         setIsCustomerNotFound(true);
-        setCustomerForm((prev) => ({
-          ...prev,
-          phone: p,
-          name: '',
-          email: '',
-          birthday: '',
-          anniversary: '',
-        }));
+        setCustomerForm({ ...emptyCustomerForm, phone: p });
         setCustomerFormErrors({});
         setMsg({ text: `No customer found for mobile "${p}". You can register them as a new customer.`, type: 'info' });
       } else if (data.length === 1) {
@@ -193,14 +214,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
     setIsCustomerNotFound(false);
     setSearchPhone('');
     setShowPastBills(false);
-    setCustomerForm({
-      name: '',
-      phone: '',
-      email: '',
-      birthday: '',
-      anniversary: '',
-      marketing_consent: true,
-    });
+    setCustomerForm(emptyCustomerForm);
     setCustomerFormErrors({});
     setCurrentStep(1);
   };
@@ -224,6 +238,18 @@ export default function Billing({ mode = 'new' }: BillingProps) {
     if (!customerForm.birthday) {
       errors.birthday = 'Date of birth is mandatory.';
     }
+    if (!customerForm.address_line1.trim()) {
+      errors.address_line1 = 'Street address is mandatory.';
+    }
+    if (!customerForm.city.trim()) {
+      errors.city = 'City is mandatory.';
+    }
+    if (!customerForm.state.trim()) {
+      errors.state = 'State is mandatory.';
+    }
+    if (!customerForm.postal_code.trim()) {
+      errors.postal_code = 'PIN code is mandatory.';
+    }
     // Anniversary is optional
 
     setCustomerFormErrors(errors);
@@ -233,7 +259,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
   // Save Customer Profile & Advance to Step 2 with auto-opened scanner
   const handleSaveCustomerAndProceed = async () => {
     if (!validateCustomerForm()) {
-      setMsg({ text: 'Please fill in all mandatory fields (Full Name, Phone Number, Email, Birthday).', type: 'error' });
+      setMsg({ text: 'Please fill in all mandatory fields (Full Name, Phone Number, Email, Address, PIN code, Birthday).', type: 'error' });
       return;
     }
     setIsSavingCustomer(true);
@@ -243,6 +269,10 @@ export default function Billing({ mode = 'new' }: BillingProps) {
         name: customerForm.name.trim(),
         phone: customerForm.phone.trim(),
         email: customerForm.email.trim(),
+        address_line1: customerForm.address_line1.trim(),
+        city: customerForm.city.trim(),
+        state: customerForm.state.trim(),
+        postal_code: customerForm.postal_code.trim(),
         birthday: customerForm.birthday || null,
         anniversary: customerForm.anniversary || null,
         marketing_consent: customerForm.marketing_consent,
@@ -400,14 +430,6 @@ export default function Billing({ mode = 'new' }: BillingProps) {
 
         {isHistory && (
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <Link
-              to="/admin/billing/new"
-              className="btn gold"
-              style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px' }}
-            >
-              <span>➕</span>
-              <span>Create New Bill</span>
-            </Link>
             <button className="btn ghost" onClick={() => historyQuery.refetch()} style={{ fontSize: 13 }}>
               ↻ Refresh
             </button>
@@ -723,6 +745,58 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                           />
                           {customerFormErrors.email && (
                             <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.email}</div>
+                          )}
+                        </div>
+
+                        {/* Street Address */}
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <label className="lbl">Street Address *</label>
+                          <input
+                            value={customerForm.address_line1}
+                            onChange={(e) => setCustomerForm({ ...customerForm, address_line1: e.target.value })}
+                            placeholder="House / street / locality"
+                          />
+                          {customerFormErrors.address_line1 && (
+                            <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.address_line1}</div>
+                          )}
+                        </div>
+
+                        {/* City */}
+                        <div>
+                          <label className="lbl">City *</label>
+                          <input
+                            value={customerForm.city}
+                            onChange={(e) => setCustomerForm({ ...customerForm, city: e.target.value })}
+                            placeholder="e.g. Bengaluru"
+                          />
+                          {customerFormErrors.city && (
+                            <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.city}</div>
+                          )}
+                        </div>
+
+                        {/* State */}
+                        <div>
+                          <label className="lbl">State *</label>
+                          <input
+                            value={customerForm.state}
+                            onChange={(e) => setCustomerForm({ ...customerForm, state: e.target.value })}
+                            placeholder="e.g. Karnataka"
+                          />
+                          {customerFormErrors.state && (
+                            <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.state}</div>
+                          )}
+                        </div>
+
+                        {/* PIN code */}
+                        <div>
+                          <label className="lbl">PIN Code *</label>
+                          <input
+                            value={customerForm.postal_code}
+                            onChange={(e) => setCustomerForm({ ...customerForm, postal_code: e.target.value })}
+                            placeholder="e.g. 560001"
+                          />
+                          {customerFormErrors.postal_code && (
+                            <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.postal_code}</div>
                           )}
                         </div>
 
@@ -1420,19 +1494,19 @@ export default function Billing({ mode = 'new' }: BillingProps) {
             <input
               placeholder="Search by invoice #, customer name, or phone..."
               value={historySearch}
-              onChange={(e) => setHistorySearch(e.target.value)}
+              onChange={(e) => { setHistorySearch(e.target.value); setHistoryPage(1); }}
               style={{ minWidth: 260 }}
             />
             <input
               type="date"
               value={historyFrom}
-              onChange={(e) => setHistoryFrom(e.target.value)}
+              onChange={(e) => { setHistoryFrom(e.target.value); setHistoryPage(1); }}
               title="From date"
             />
             <input
               type="date"
               value={historyTo}
-              onChange={(e) => setHistoryTo(e.target.value)}
+              onChange={(e) => { setHistoryTo(e.target.value); setHistoryPage(1); }}
               title="To date"
             />
             {(historySearch || historyFrom || historyTo) && (
@@ -1442,6 +1516,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                   setHistorySearch('');
                   setHistoryFrom('');
                   setHistoryTo('');
+                  setHistoryPage(1);
                 }}
                 style={{ minWidth: 80, fontSize: 12 }}
               >
@@ -1462,18 +1537,20 @@ export default function Billing({ mode = 'new' }: BillingProps) {
               <table className="tbl" style={{ width: '100%', margin: 0 }}>
                 <thead>
                   <tr style={{ background: '#FAF6F1' }}>
+                    <th style={{ width: 56 }}>S.No</th>
                     <th>Invoice No</th>
                     <th>Date &amp; Time</th>
                     <th>Customer Name</th>
                     <th>Phone / Code</th>
-                    <th>Total Amount</th>
+                    <th style={{ textAlign: 'right' }}>Total Amount</th>
                     <th>Status</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {historyQuery.data.data.map((s: any) => (
+                  {historyQuery.data.data.map((s: any, i: number) => (
                     <tr key={s.id}>
+                      <td style={{ color: 'var(--color-muted)' }}>{(historyPage - 1) * historyLimit + i + 1}</td>
                       <td>
                         <strong>{s.invoice_no}</strong>
                       </td>
@@ -1493,7 +1570,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                           <small style={{ color: 'var(--color-muted)' }}>{s.customer_code}</small>
                         )}
                       </td>
-                      <td style={{ fontWeight: 700, color: 'var(--color-gold-deep)', fontSize: 15 }}>
+                      <td style={{ fontWeight: 700, color: 'var(--color-gold-deep)', fontSize: 15, textAlign: 'right', whiteSpace: 'nowrap' }}>
                         {inr(s.total_inr)}
                       </td>
                       <td>
@@ -1524,6 +1601,64 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {!historyQuery.isLoading && (
+            <div
+              style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                flexWrap: 'wrap', gap: 12, marginTop: 16,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 13, color: 'var(--color-muted)' }}>
+                <span>Show</span>
+                <select
+                  value={historyLimit}
+                  onChange={(e) => { setHistoryLimit(Number(e.target.value)); setHistoryPage(1); }}
+                  style={{ width: 'auto', padding: '6px 10px' }}
+                >
+                  {[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+                <span>per page</span>
+                {historyTotal > 0 && (
+                  <span style={{ marginLeft: 6 }}>
+                    Showing {(historyPage - 1) * historyLimit + 1}–{Math.min(historyPage * historyLimit, historyTotal)} of {historyTotal} invoices
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <button
+                  className="btn ghost"
+                  onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                  disabled={historyPage <= 1}
+                  style={{ padding: '6px 12px', fontSize: 13 }}
+                >
+                  ‹ Prev
+                </button>
+                {historyPageNumbers.map((p, idx) => (
+                  p === '...' ? (
+                    <span key={`gap-${idx}`} style={{ padding: '0 4px', color: 'var(--color-muted)' }}>…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setHistoryPage(p)}
+                      className={p === historyPage ? 'btn gold' : 'btn ghost'}
+                      style={{ padding: '6px 11px', fontSize: 13, minWidth: 34 }}
+                    >
+                      {p}
+                    </button>
+                  )
+                ))}
+                <button
+                  className="btn ghost"
+                  onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}
+                  disabled={historyPage >= historyTotalPages}
+                  style={{ padding: '6px 12px', fontSize: 13 }}
+                >
+                  Next ›
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -83,6 +83,7 @@ label.lbl { font-size: 13px; font-weight: 600; color: var(--color-muted); displa
 /* ── Luxe dark sidebar ─────────────────────────── */
 .sidebar {
   width: 248px; flex-shrink: 0;
+  position: sticky; top: 0; align-self: flex-start; height: 100vh;
   background:
     radial-gradient(900px 420px at -20% -10%, rgba(196,154,82,.14), transparent 60%),
     linear-gradient(180deg, #2B211A 0%, #1C1512 100%);

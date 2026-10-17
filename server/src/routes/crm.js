@@ -72,9 +72,13 @@ router.get('/customers', async (req, res) => {
   const total = (await get(`SELECT COUNT(*) n FROM customers c WHERE ${conds.join(' AND ')}`, ...args)).n;
   res.json({ data: rows, total, page: Number(page) });
 });
+// Customers must always have a name, phone and a complete postal address.
+const CUSTOMER_REQUIRED = ['name', 'phone', 'address_line1', 'city', 'state', 'postal_code'];
+
 router.post('/customers', async (req, res) => {
   const b = req.body || {};
-  if (!b.name || !b.phone) return res.status(400).json({ error: 'bad_request', message: 'name + phone required' });
+  const missing = CUSTOMER_REQUIRED.filter((k) => !String(b[k] ?? '').trim());
+  if (missing.length) return res.status(400).json({ error: 'bad_request', message: `Missing required fields: ${missing.join(', ')}`, fields: missing });
   if (!isValidPhone(b.phone)) return res.status(400).json({ error: 'bad_request', message: 'phone number looks invalid' });
   const norm = normalizePhone(b.phone);
   const existing = await all('SELECT * FROM customers WHERE shop_id = ? AND (normalized_phone = ? OR phone = ?)',
@@ -103,8 +107,19 @@ router.patch('/customers/:id', async (req, res) => {
   if (!cur) return res.status(404).json({ error: 'not_found' });
   const b = req.body || {};
   const allowed = ['name', 'phone', 'email', 'address_line1', 'city', 'state', 'postal_code', 'birthday', 'anniversary', 'notes', 'preferred_channel'];
+  // Keep the mandatory fields present (the edited record must stay valid).
+  const missing = CUSTOMER_REQUIRED.filter((k) => !String((b[k] !== undefined ? b[k] : cur[k]) ?? '').trim());
+  if (missing.length) return res.status(400).json({ error: 'bad_request', message: `Missing required fields: ${missing.join(', ')}`, fields: missing });
+  if (b.phone !== undefined && !isValidPhone(b.phone)) return res.status(400).json({ error: 'bad_request', message: 'phone number looks invalid' });
+  if (b.phone !== undefined) {
+    const norm = normalizePhone(b.phone);
+    const dup = await all('SELECT id FROM customers WHERE shop_id = ? AND id <> ? AND (normalized_phone = ? OR phone = ?)',
+      cur.shop_id, cur.id, norm, b.phone);
+    if (dup.length) return res.status(409).json({ error: 'duplicate', message: 'Phone already exists on another profile', data: dup });
+  }
   const sets = []; const args = [];
   for (const k of allowed) if (b[k] !== undefined) { sets.push(`${k} = ?`); args.push(b[k]); }
+  if (b.phone !== undefined) { sets.push('normalized_phone = ?'); args.push(normalizePhone(b.phone)); }
   if (b.marketing_consent !== undefined) {
     sets.push('marketing_consent = ?'); args.push(b.marketing_consent ? 1 : 0);
     await run('INSERT INTO consent_events (id, customer_id, channel, purpose, status, source) VALUES (?,?,?,?,?,?)',

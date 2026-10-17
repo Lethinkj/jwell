@@ -100,6 +100,10 @@ test('flow: phone search returns 0 matches -> not found -> register customer wit
     name: 'Ananya Roy',
     phone: testPhone,
     email: 'ananya@example.com',
+    address_line1: '12 MG Road',
+    city: 'Bengaluru',
+    state: 'KA',
+    postal_code: '560001',
     birthday: '1995-04-12',
     anniversary: '2020-11-20',
     marketing_consent: true,
@@ -126,6 +130,10 @@ test('flow: barcode estimate -> draft -> finalize with edited final price overri
     name: 'Kavita Krishnan',
     phone: testPhone,
     email: 'kavita@example.com',
+    address_line1: '45 Church Street',
+    city: 'Bengaluru',
+    state: 'KA',
+    postal_code: '560001',
   });
   assert.equal(custRes.status, 201);
   const custId = custRes.data.data.id;
@@ -183,6 +191,10 @@ test('flow: manual jewellery piece entry -> draft -> finalize with custom price 
     name: 'Suresh Patel',
     phone: testPhone,
     email: 'suresh@example.com',
+    address_line1: '9 Brigade Road',
+    city: 'Bengaluru',
+    state: 'KA',
+    postal_code: '560001',
     birthday: '1988-06-15',
   });
   assert.equal(custRes.status, 201);

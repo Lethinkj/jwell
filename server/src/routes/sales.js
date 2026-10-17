@@ -38,6 +38,10 @@ async function getOrCreateCustomer(shopId, inline) {
 router.post('/sales/draft', requireRoles('admin', 'billing'), async (req, res) => {
   const { customer_id, customer_inline, lines = [] } = req.body || {};
   if (!lines.length) return res.status(400).json({ error: 'bad_request', message: 'lines required' });
+  if (customer_inline) {
+    const missing = ['name', 'phone', 'address_line1', 'city', 'state', 'postal_code'].filter((k) => !String(customer_inline[k] ?? '').trim());
+    if (missing.length) return res.status(400).json({ error: 'bad_request', message: `customer_inline missing required fields: ${missing.join(', ')}`, fields: missing });
+  }
   let customer = customer_id ? await get('SELECT * FROM customers WHERE id=?', customer_id) : null;
   if (customer_inline) customer = await getOrCreateCustomer(req.user.shop_id, customer_inline);
   const id = uid('sal');
@@ -175,8 +179,9 @@ router.get('/sales', async (req, res) => {
   if (q) { conds.push('(s.invoice_no LIKE ? OR c.name LIKE ? OR c.phone LIKE ?)'); args.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   const off = (Number(page) - 1) * Number(limit);
   const rows = await all(`SELECT s.*, c.name AS customer_name, c.phone AS customer_phone, c.customer_code FROM sales s LEFT JOIN customers c ON c.id=s.customer_id
-    WHERE ${conds.join(' AND ')} ORDER BY s.sold_at DESC LIMIT ? OFFSET ?`, ...args, Number(limit), off);
-  res.json({ data: rows });
+    WHERE ${conds.join(' AND ')} ORDER BY COALESCE(s.sold_at, s.created_at) DESC LIMIT ? OFFSET ?`, ...args, Number(limit), off);
+  const total = (await get(`SELECT COUNT(*) n FROM sales s LEFT JOIN customers c ON c.id=s.customer_id WHERE ${conds.join(' AND ')}`, ...args)).n;
+  res.json({ data: rows, total, page: Number(page), limit: Number(limit) });
 });
 router.get('/sales/:id', async (req, res) => {
   const sale = await get(`SELECT s.*, c.name AS customer_name, c.phone AS customer_phone, c.email AS customer_email, c.customer_code,

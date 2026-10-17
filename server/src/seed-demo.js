@@ -170,8 +170,9 @@ async function seedCustomers(shopId) {
   let code = count;
   for (const [nm, ph, em, bdd, ann, consent] of MORE) {
     code++;
-    await run(`INSERT INTO customers (id, shop_id, customer_code, name, phone, normalized_phone, email, birthday, anniversary, marketing_consent, total_spent_inr, purchase_count)
-      VALUES (?,?,?,?,?,?,?,?,?,?,0,0)`, uid('cus'), shopId, `C${String(code).padStart(5, '0')}`, nm, ph, normalizePhone(ph), em, bdd, ann, consent);
+    await run(`INSERT INTO customers (id, shop_id, customer_code, name, phone, normalized_phone, email, birthday, anniversary, marketing_consent, total_spent_inr, purchase_count, address_line1, city, state, postal_code)
+      VALUES (?,?,?,?,?,?,?,?,?,?,0,0,?,?,?,?)`, uid('cus'), shopId, `C${String(code).padStart(5, '0')}`, nm, ph, normalizePhone(ph), em, bdd, ann, consent,
+      `${code} Residency Road`, 'Bengaluru', 'KA', '560025');
   }
   console.log(`[seed-demo] added ${MORE.length} customers`);
 }
