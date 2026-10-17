@@ -1,0 +1,23 @@
+# Reverse-proxy .htaccess for demo.marvelslice.com
+#
+# INSTALL: copy this file into the DocumentRoot of demo.marvelslice.com and
+# rename it to `.htaccess` (e.g. Webuzo's docroot for that subdomain).
+# Verify the docroot with:
+#   grep -rn "demo.marvelslice.com" /usr/local/apps/apache/conf/ | grep -i documentroot
+#
+# Then:
+#   curl -sI -H 'Host: demo.marvelslice.com' http://127.0.0.1/ | head -1
+#   # want "HTTP/1.1 200 OK" from the container (Server: nginx), not a Webuzo 404.
+
+RewriteEngine On
+
+# Our nginx uses `server_name _` and accepts any Host, so this is optional;
+# kept to mirror the lms.marvelslice.com setup on this server.
+RequestHeader set Host "demo.marvelslice.com"
+
+# Let ACME/Let's Encrypt challenges reach files on disk instead of the container.
+RewriteCond %{REQUEST_URI} !^/\.well-known [NC]
+
+# [P] = proxy (NOT [R], which would redirect the browser to the visitor's own
+# 127.0.0.1). Target = the goldshop-web container published by docker-compose.
+RewriteRule ^(.*)$ http://127.0.0.1:8083/$1 [P,L]

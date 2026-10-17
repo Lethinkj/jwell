@@ -21,7 +21,8 @@ disposable and `docker compose up -d --build` is a full deploy.
 | `server/Dockerfile` | API image; ships `packages/` and `supabase/migrations` |
 | `apps/web/Dockerfile` | Builds the Vite SPA, serves it via nginx |
 | `apps/web/nginx.conf` | In-container nginx: SPA fallback + `/api` proxy |
-| `deploy/apache/subdomain-vhost.conf` | Apache proxy lines for the subdomain |
+| `deploy/apache/subdomain.htaccess` | `.htaccess` forwarding the subdomain to the container (**used**) |
+| `deploy/apache/subdomain-vhost.conf` | Reference: the vhost `ProxyPass` alternative |
 | `.dockerignore` | Keeps the build context lean and secrets out |
 
 ## Ports
@@ -45,8 +46,10 @@ docker ps --format 'table {{.Names}}\t{{.Ports}}'
 ## One-time server setup
 
 1. DNS: `A` record for `demo.marvelslice.com` → VPS IP.
-2. In Webuzo: create the subdomain, enable SSL (Let's Encrypt), then add the
-   proxy lines from `deploy/apache/subdomain-vhost.conf` and reload Apache.
+2. In Webuzo: create the subdomain `demo.marvelslice.com` and enable SSL (Let's
+   Encrypt). Then forward Apache to the container by copying
+   `deploy/apache/subdomain.htaccess` into the subdomain's **DocumentRoot** as
+   `.htaccess`. (vhost `ProxyPass` alternative: `deploy/apache/subdomain-vhost.conf`.)
 3. Create the env file next to `docker-compose.yml` (git-ignored, excluded from
    the image):
 
@@ -150,5 +153,6 @@ docker compose logs -f goldshop-api
   local Postgres with SSL off, make that option conditional.
 - **`/api` returns 502** — `goldshop-web` is pointing at a stale `goldshop-api`
   IP. Recreate both: `docker compose up -d --build`.
-- **Apex/subdomain 404 from Apache** — the `ProxyPass` lines aren't in the right
-  vhost, or the module (`proxy_http`) isn't enabled.
+- **Subdomain 404 / Webuzo page instead of the app** — the `.htaccess` isn't in
+  the subdomain's DocumentRoot, or `ProxyPass` was put *in* `.htaccess` (invalid
+  there — use `RewriteRule … [P]`, see `deploy/apache/subdomain.htaccess`).
