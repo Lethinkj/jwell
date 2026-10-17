@@ -49,7 +49,7 @@ export default function CustomerExplorerModal({ onSelectCustomer, onClose }: Pro
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(59, 48, 43, 0.65)',
+        backgroundColor: 'rgba(71, 16, 29, 0.65)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -72,7 +72,7 @@ export default function CustomerExplorerModal({ onSelectCustomer, onClose }: Pro
           backgroundColor: '#fff',
           borderRadius: 14,
           padding: 20,
-          boxShadow: '0 20px 45px rgba(59,48,43,0.3)',
+          boxShadow: '0 20px 45px rgba(71,16,29,0.3)',
         }}
       >
         {/* Header */}
@@ -109,7 +109,7 @@ export default function CustomerExplorerModal({ onSelectCustomer, onClose }: Pro
               border: '1px solid var(--color-border)',
               borderRadius: 8,
               overflowY: 'auto',
-              background: '#FAF6F1',
+              background: '#EFE5E5',
               padding: 10,
             }}
           >
@@ -127,7 +127,7 @@ export default function CustomerExplorerModal({ onSelectCustomer, onClose }: Pro
                     padding: 12,
                     marginBottom: 8,
                     borderRadius: 8,
-                    background: isSelected ? '#F4DDE3' : '#fff',
+                    background: isSelected ? '#F7E4E8' : '#fff',
                     border: isSelected ? '1px solid var(--color-rose)' : '1px solid var(--color-border)',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
@@ -180,7 +180,7 @@ export default function CustomerExplorerModal({ onSelectCustomer, onClose }: Pro
                 {/* Customer Info Card */}
                 <div
                   style={{
-                    background: '#FAF6F1',
+                    background: '#EFE5E5',
                     borderRadius: 8,
                     padding: 14,
                     marginBottom: 16,
@@ -230,14 +230,14 @@ export default function CustomerExplorerModal({ onSelectCustomer, onClose }: Pro
                 </h4>
 
                 {(!activeDetail.purchases || activeDetail.purchases.length === 0) ? (
-                  <div className="empty" style={{ padding: 24, background: '#FAF6F1', borderRadius: 8 }}>
+                  <div className="empty" style={{ padding: 24, background: '#EFE5E5', borderRadius: 8 }}>
                     No finalized bills recorded for this customer yet.
                   </div>
                 ) : (
                   <div style={{ overflowX: 'auto' }}>
                     <table className="tbl" style={{ width: '100%', fontSize: 13 }}>
                       <thead>
-                        <tr style={{ background: '#FAF6F1' }}>
+                        <tr style={{ background: '#EFE5E5' }}>
                           <th>Invoice No</th>
                           <th>Date</th>
                           <th>Total</th>

@@ -33,7 +33,7 @@ export default function ProductDetailModal({ productId, onClose }: Props) {
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, backgroundColor: 'rgba(59, 48, 43, 0.65)',
+        position: 'fixed', inset: 0, backgroundColor: 'rgba(71, 16, 29, 0.65)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 990,
         padding: 16, backdropFilter: 'blur(3px)',
       }}
@@ -44,7 +44,7 @@ export default function ProductDetailModal({ productId, onClose }: Props) {
         style={{
           width: '100%', maxWidth: 900, maxHeight: '90vh', overflowY: 'auto',
           backgroundColor: '#fff', borderRadius: 14, padding: 20,
-          boxShadow: '0 20px 45px rgba(59,48,43,0.3)',
+          boxShadow: '0 20px 45px rgba(71,16,29,0.3)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
@@ -124,7 +124,7 @@ export default function ProductDetailModal({ productId, onClose }: Props) {
                   <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {p.sales.map((s: any) => (
                       <div key={s.sale_item_id} style={{
-                        border: '1px solid var(--color-border)', borderRadius: 8, padding: 10, background: '#FAF6F1',
+                        border: '1px solid var(--color-border)', borderRadius: 8, padding: 10, background: '#EFE5E5',
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <div>

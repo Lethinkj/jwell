@@ -4,9 +4,9 @@ import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, Legend, XAxis, YAx
 import { api, inr } from '../../lib/api';
 import { Icon, ICONS } from '../../components/icons';
 
-const GOLD = '#C49A52';
-const GOLD_DEEP = '#8A6428';
-const PIE_COLORS = ['#C49A52', '#8D5668', '#5B6B8C', '#26734D', '#946200', '#8A6428'];
+const GOLD = '#D6B45C';
+const GOLD_DEEP = '#B89A52';
+const PIE_COLORS = ['#D6B45C', '#631628', '#5B6B8C', '#26734D', '#946200', '#B89A52'];
 const PRESETS: Array<[string, string]> = [['today', 'Today'], ['week', 'Week'], ['month', 'Month'], ['3m', '3 months'], ['6m', '6 months'], ['1y', '1 year']];
 
 export default function Reports() {
@@ -33,9 +33,9 @@ export default function Reports() {
   const repeatPct = c ? Math.round((Number(c.repeat_rate) || 0) * 100) : 0;
   const kpis = [
     { label: 'Revenue', value: s ? inr(s.revenue) : null, icon: ICONS.wallet, tint: GOLD },
-    { label: 'Bills', value: s ? s.bill_count : null, icon: ICONS.receipt, tint: '#8D5668' },
+    { label: 'Bills', value: s ? s.bill_count : null, icon: ICONS.receipt, tint: '#631628' },
     { label: 'Avg bill', value: s ? inr(s.avg_bill) : null, icon: ICONS.calculator, tint: '#26734D' },
-    { label: 'Items sold', value: s ? s.items_sold : null, icon: ICONS.gem, tint: '#B08437' },
+    { label: 'Items sold', value: s ? s.items_sold : null, icon: ICONS.gem, tint: '#B89A52' },
     { label: 'Gold sold', value: s ? `${Number(s.gold_weight_g).toFixed(2)} g` : null, icon: ICONS.scale, tint: '#5B6B8C' },
     { label: 'Gross profit est.', value: s ? (s.gross_profit_estimate == null ? 'restricted' : inr(s.gross_profit_estimate)) : null, icon: ICONS.trending, tint: '#946200' },
   ];
@@ -74,7 +74,7 @@ export default function Reports() {
                       <stop offset="100%" stopColor={GOLD} stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EDE4D9" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E8DDD6" vertical={false} />
                   <XAxis dataKey="x" fontSize={11} tickMargin={6} />
                   <YAxis fontSize={11} tickFormatter={(v: number) => `₹${Number(v).toLocaleString('en-IN')}`} width={70} />
                   <Tooltip formatter={(v: any, key: any) => (key === 'revenue' ? inr(Number(v)) : v)} contentStyle={tooltipStyle} />
@@ -108,10 +108,10 @@ export default function Reports() {
             {byCat.length ? (
               <ResponsiveContainer>
                 <BarChart data={byCat} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EDE4D9" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E8DDD6" vertical={false} />
                   <XAxis dataKey="x" fontSize={11} tickMargin={6} interval={0} height={46} angle={-18} textAnchor="end" />
                   <YAxis fontSize={11} tickFormatter={(v: number) => `₹${Number(v).toLocaleString('en-IN')}`} width={70} />
-                  <Tooltip formatter={(v: any) => inr(Number(v))} contentStyle={tooltipStyle} cursor={{ fill: 'rgba(196,154,82,.08)' }} />
+                  <Tooltip formatter={(v: any) => inr(Number(v))} contentStyle={tooltipStyle} cursor={{ fill: 'rgba(214,180,92,.08)' }} />
                   <Bar dataKey="revenue" fill={GOLD} radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -135,7 +135,7 @@ export default function Reports() {
                 ))}
               </div>
               <label className="lbl">Repeat purchase rate — {repeatPct}%</label>
-              <div style={{ height: 8, background: '#EFE5DA', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{ height: 8, background: '#E8DDD6', borderRadius: 999, overflow: 'hidden' }}>
                 <div style={{ width: `${repeatPct}%`, height: '100%', background: `linear-gradient(90deg, ${GOLD}, ${GOLD_DEEP})`, borderRadius: 999, transition: 'width var(--motion-standard)' }} />
               </div>
             </>

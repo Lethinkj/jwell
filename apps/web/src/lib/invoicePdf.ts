@@ -66,7 +66,7 @@ export function downloadInvoicePdf(sale: SaleInvoiceData) {
   let y = margin;
 
   // Header background bar
-  doc.setFillColor(59, 48, 43); // #3B302B espresso
+  doc.setFillColor(71, 16, 29); // #47101D espresso
   doc.rect(margin, y, pageWidth - margin * 2, 22, 'F');
 
   // Shop Name & Subtitle
@@ -84,7 +84,7 @@ export function downloadInvoicePdf(sale: SaleInvoiceData) {
   // TAX INVOICE tag on top right
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.setTextColor(255, 215, 0); // Gold tone
+  doc.setTextColor(214, 180, 92); // Gold tone
   doc.text('TAX INVOICE', pageWidth - margin - 6, y + 10, { align: 'right' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
@@ -94,14 +94,14 @@ export function downloadInvoicePdf(sale: SaleInvoiceData) {
   y += 28;
 
   // Invoice & Customer Info Box
-  doc.setDrawColor(233, 225, 218);
+  doc.setDrawColor(232, 221, 214);
   doc.setFillColor(252, 250, 248);
   doc.roundedRect(margin, y, pageWidth - margin * 2, 34, 2, 2, 'FD');
 
   // Left side: Invoice details
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.setTextColor(59, 48, 43);
+  doc.setTextColor(71, 16, 29);
   doc.text('INVOICE DETAILS', margin + 4, y + 6);
 
   doc.setFont('helvetica', 'normal');
@@ -109,20 +109,20 @@ export function downloadInvoicePdf(sale: SaleInvoiceData) {
   doc.setTextColor(100, 95, 90);
   doc.text('Invoice No:', margin + 4, y + 12);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(59, 48, 43);
+  doc.setTextColor(71, 16, 29);
   doc.text(sale.invoice_no || 'DRAFT', margin + 28, y + 12);
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 95, 90);
   doc.text('Date & Time:', margin + 4, y + 18);
-  doc.setTextColor(59, 48, 43);
+  doc.setTextColor(71, 16, 29);
   const dateStr = sale.sold_at || sale.created_at || new Date().toISOString();
   doc.text(new Date(dateStr).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }), margin + 28, y + 18);
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 95, 90);
   doc.text('Rate Snapshot:', margin + 4, y + 24);
-  doc.setTextColor(59, 48, 43);
+  doc.setTextColor(71, 16, 29);
   doc.text(sale.rate_24k_per_g_inr ? `Rs. ${sale.rate_24k_per_g_inr}/g (24K)` : 'Standard Rate', margin + 28, y + 24);
 
   doc.setFont('helvetica', 'normal');
@@ -136,7 +136,7 @@ export function downloadInvoicePdf(sale: SaleInvoiceData) {
   const rightX = margin + (pageWidth - margin * 2) / 2 + 6;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.setTextColor(59, 48, 43);
+  doc.setTextColor(71, 16, 29);
   doc.text('BILLED TO / CUSTOMER', rightX, y + 6);
 
   doc.setFont('helvetica', 'normal');
@@ -144,25 +144,25 @@ export function downloadInvoicePdf(sale: SaleInvoiceData) {
   doc.setTextColor(100, 95, 90);
   doc.text('Name:', rightX, y + 12);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(59, 48, 43);
+  doc.setTextColor(71, 16, 29);
   doc.text(sale.customer_name || 'Walk-in Customer', rightX + 16, y + 12);
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 95, 90);
   doc.text('Phone:', rightX, y + 18);
-  doc.setTextColor(59, 48, 43);
+  doc.setTextColor(71, 16, 29);
   doc.text(sale.customer_phone || '—', rightX + 16, y + 18);
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 95, 90);
   doc.text('Email:', rightX, y + 24);
-  doc.setTextColor(59, 48, 43);
+  doc.setTextColor(71, 16, 29);
   doc.text(sale.customer_email || '—', rightX + 16, y + 24);
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 95, 90);
   doc.text('Code:', rightX, y + 30);
-  doc.setTextColor(59, 48, 43);
+  doc.setTextColor(71, 16, 29);
   doc.text(sale.customer_code || '—', rightX + 16, y + 30);
 
   y += 39;
@@ -178,9 +178,9 @@ export function downloadInvoicePdf(sale: SaleInvoiceData) {
     total: 38,
   };
 
-  doc.setFillColor(244, 236, 227); // #F4ECE3
+  doc.setFillColor(251, 243, 237); // #F4ECE3
   doc.rect(margin, y, pageWidth - margin * 2, 7.5, 'F');
-  doc.setDrawColor(210, 195, 180);
+  doc.setDrawColor(232, 221, 214);
   doc.line(margin, y + 7.5, pageWidth - margin, y + 7.5);
 
   doc.setFont('helvetica', 'bold');
@@ -251,7 +251,7 @@ export function downloadInvoicePdf(sale: SaleInvoiceData) {
     y += 7;
   });
 
-  doc.setDrawColor(210, 195, 180);
+  doc.setDrawColor(232, 221, 214);
   doc.line(margin, y, pageWidth - margin, y);
   y += 6;
 
@@ -263,7 +263,7 @@ export function downloadInvoicePdf(sale: SaleInvoiceData) {
   const payX = margin + 2;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
-  doc.setTextColor(59, 48, 43);
+  doc.setTextColor(71, 16, 29);
   doc.text('PAYMENT DETAILS', payX, y + 4);
 
   doc.setFont('helvetica', 'normal');
@@ -306,19 +306,19 @@ export function downloadInvoicePdf(sale: SaleInvoiceData) {
   doc.text(formatInrCurrency(sale.tax_inr), summaryX + summaryWidth - 4, y + 18, { align: 'right' });
 
   // Final Total Highlight Bar
-  doc.setFillColor(59, 48, 43);
+  doc.setFillColor(71, 16, 29);
   doc.roundedRect(summaryX, y + 22, summaryWidth, 12, 1, 1, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.text('FINAL PRICE:', summaryX + 4, y + 30);
-  doc.setTextColor(255, 215, 0); // Gold
+  doc.setTextColor(214, 180, 92); // Gold
   doc.text(formatInrCurrency(sale.total_inr), summaryX + summaryWidth - 4, y + 30, { align: 'right' });
 
   y += 42;
 
   // Terms and Footer
-  doc.setDrawColor(230, 220, 210);
+  doc.setDrawColor(232, 221, 214);
   doc.line(margin, y, pageWidth - margin, y);
   y += 5;
 

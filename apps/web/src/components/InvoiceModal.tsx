@@ -43,7 +43,7 @@ export default function InvoiceModal({ saleId, initialSale, onClose }: Props) {
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(59, 48, 43, 0.65)',
+        backgroundColor: 'rgba(71, 16, 29, 0.65)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -65,7 +65,7 @@ export default function InvoiceModal({ saleId, initialSale, onClose }: Props) {
           backgroundColor: '#fff',
           borderRadius: 14,
           padding: 24,
-          boxShadow: '0 20px 45px rgba(59,48,43,0.35)',
+          boxShadow: '0 20px 45px rgba(71,16,29,0.35)',
           position: 'relative',
         }}
       >
@@ -144,7 +144,7 @@ export default function InvoiceModal({ saleId, initialSale, onClose }: Props) {
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
                 gap: 16,
-                background: '#FAF6F1',
+                background: '#EFE5E5',
                 padding: 14,
                 borderRadius: 8,
                 marginBottom: 18,
@@ -212,7 +212,7 @@ export default function InvoiceModal({ saleId, initialSale, onClose }: Props) {
 
             {/* Summary & Totals */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20 }}>
-              <div style={{ width: '100%', maxWidth: 320, background: '#FAF6F1', padding: 14, borderRadius: 8, fontSize: 14 }}>
+              <div style={{ width: '100%', maxWidth: 320, background: '#EFE5E5', padding: 14, borderRadius: 8, fontSize: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                   <span>Items Subtotal:</span>
                   <span>{inr(sale.subtotal_inr)}</span>

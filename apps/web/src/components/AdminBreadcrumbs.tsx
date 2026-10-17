@@ -32,8 +32,9 @@ export default function AdminBreadcrumbs() {
     }
   } else if (path === '/admin/barcodes') {
     crumbs.push({ label: 'Barcode Generator' });
-  } else if (path === '/admin/customers') {
-    crumbs.push({ label: 'Customers & CRM' });
+  } else if (path.startsWith('/admin/customers')) {
+    crumbs.push({ label: 'Customers & CRM', to: '/admin/customers' });
+    crumbs.push({ label: path === '/admin/customers/new' ? 'New Customer' : 'All Customers' });
   } else if (path === '/admin/staff') {
     crumbs.push({ label: 'Staff Management' });
   } else if (path === '/admin/rates') {

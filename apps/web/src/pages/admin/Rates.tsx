@@ -4,8 +4,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { api, inr } from '../../lib/api';
 import { Icon, ICONS } from '../../components/icons';
 
-const GOLD = '#C49A52';
-const GOLD_DEEP = '#8A6428';
+const GOLD = '#D6B45C';
+const GOLD_DEEP = '#B89A52';
 
 export default function Rates() {
   const cur = useQuery({ queryKey: ['rate-cur'], queryFn: () => api.get('/gold-rates/current'), refetchInterval: 30000 });
@@ -81,7 +81,7 @@ export default function Rates() {
                     <stop offset="100%" stopColor={GOLD} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EDE4D9" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E8DDD6" vertical={false} />
                 <XAxis dataKey="x" fontSize={11} tickMargin={6} />
                 <YAxis fontSize={11} tickFormatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} width={70} />
                 <Tooltip formatter={(v: any) => [`${inr(Number(v))}/g`, '24K']} contentStyle={{ borderRadius: 10, border: '1px solid var(--color-border)', fontSize: 13 }} />

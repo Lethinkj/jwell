@@ -31,7 +31,6 @@ const qc = new QueryClient();
 type NavItem = { to: string; label: string; icon: string[]; end?: boolean };
 const NAV_OVERVIEW: NavItem = { to: '/admin', label: 'Overview', icon: ICONS.overview, end: true };
 const NAV_BARCODE: NavItem = { to: '/admin/barcodes', label: 'Barcode Generator', icon: ICONS.barcode };
-const NAV_CUSTOMERS: NavItem = { to: '/admin/customers', label: 'Customers & CRM', icon: ICONS.customers };
 const NAV_STAFF: NavItem = { to: '/admin/staff', label: 'Staff Management', icon: ICONS.staff };
 const NAV_RATES: NavItem = { to: '/admin/rates', label: 'Gold Rates', icon: ICONS.rates };
 const NAV_CAMPAIGNS: NavItem = { to: '/admin/campaigns', label: 'Offers & Campaigns', icon: ICONS.campaigns };
@@ -72,11 +71,16 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const loc = useLocation();
   const inInventory = loc.pathname.startsWith('/admin/inventory');
-  const [invOpen, setInvOpen] = useState(inInventory);
   const inBilling = loc.pathname.startsWith('/admin/billing');
-  const [billingOpen, setBillingOpen] = useState<boolean>(true);
-  useEffect(() => { if (inInventory) setInvOpen(true); }, [inInventory]);
-  useEffect(() => { if (inBilling) setBillingOpen(true); }, [inBilling]);
+  const inCustomers = loc.pathname.startsWith('/admin/customers');
+  const [invOpen, setInvOpen] = useState(inInventory);
+  const [billingOpen, setBillingOpen] = useState<boolean>(!inInventory && !inCustomers);
+  const [custOpen, setCustOpen] = useState(inCustomers);
+  useEffect(() => {
+    if (inCustomers) { setCustOpen(true); setBillingOpen(false); setInvOpen(false); }
+    else if (inBilling) { setBillingOpen(true); setInvOpen(false); setCustOpen(false); }
+    else if (inInventory) { setInvOpen(true); setBillingOpen(false); setCustOpen(false); }
+  }, [inInventory, inBilling, inCustomers]);
   if (loading) return <div className="main"><div className="skeleton" style={{ height: 120 }} /></div>;
   if (!user) return <Navigate to="/login" replace />;
   const isAdmin = user.role === 'admin';
@@ -89,6 +93,10 @@ function AdminShell({ children }: { children: React.ReactNode }) {
     { to: '/admin/inventory', label: 'Overview', icon: ICONS.overview, end: true },
     { to: '/admin/inventory/new', label: 'Add Product', icon: ICONS.inventory },
     { to: '/admin/inventory/report', label: 'Purchase Report', icon: ICONS.reports },
+  ];
+  const custKids: NavItem[] = [
+    { to: '/admin/customers', label: 'All Customers', icon: ICONS.customers, end: true },
+    { to: '/admin/customers/new', label: 'New Customer', icon: ICONS.customers },
   ];
   const navLink = (item: NavItem) => (
     <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
@@ -109,13 +117,13 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
         {isAdmin && navLink(NAV_OVERVIEW)}
         <div className="sidebar-section">Operations</div>
-        <button type="button" className={`nav-group${inBilling ? ' active' : ''}`} onClick={() => setBillingOpen((o) => !o)} aria-expanded={billingOpen}>
+        <button type="button" className={`nav-group${inBilling ? ' active' : ''}`} onClick={() => { setBillingOpen((o) => !o); setInvOpen(false); setCustOpen(false); }} aria-expanded={billingOpen}>
           <Icon paths={ICONS.billing} /><span>Billing</span><span className={`chev${billingOpen ? ' open' : ''}`}>‹</span>
         </button>
         {billingOpen && <div className="nav-sub">{billingKids.map(navLink)}</div>}
         {isAdmin && (
           <>
-            <button type="button" className={`nav-group${inInventory ? ' active' : ''}`} onClick={() => setInvOpen((o) => !o)} aria-expanded={invOpen}>
+            <button type="button" className={`nav-group${inInventory ? ' active' : ''}`} onClick={() => { setInvOpen((o) => !o); setBillingOpen(false); setCustOpen(false); }} aria-expanded={invOpen}>
               <Icon paths={ICONS.inventory} /><span>Inventory</span><span className={`chev${invOpen ? ' open' : ''}`}>‹</span>
             </button>
             {invOpen && <div className="nav-sub">{invKids.map(navLink)}</div>}
@@ -125,7 +133,10 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         <div className="sidebar-section">Manage</div>
         {isAdmin ? (
           <>
-            {navLink(NAV_CUSTOMERS)}
+            <button type="button" className={`nav-group${inCustomers ? ' active' : ''}`} onClick={() => { setCustOpen((o) => !o); setBillingOpen(false); setInvOpen(false); }} aria-expanded={custOpen}>
+              <Icon paths={ICONS.customers} /><span>Customers &amp; CRM</span><span className={`chev${custOpen ? ' open' : ''}`}>‹</span>
+            </button>
+            {custOpen && <div className="nav-sub">{custKids.map(navLink)}</div>}
             {navLink(NAV_STAFF)}
             {navLink(NAV_RATES)}
             {navLink(NAV_CAMPAIGNS)}
@@ -196,7 +207,8 @@ export default function App() {
             <Route path="/admin/inventory/report" element={<AdminShell><RequireAdmin><InventoryReport /></RequireAdmin></AdminShell>} />
             <Route path="/admin/inventory/:id" element={<AdminShell><RequireAdmin><InventoryDetail /></RequireAdmin></AdminShell>} />
             <Route path="/admin/barcodes" element={<AdminShell><RequireAdmin><Barcodes /></RequireAdmin></AdminShell>} />
-            <Route path="/admin/customers" element={<AdminShell><Customers /></AdminShell>} />
+            <Route path="/admin/customers" element={<AdminShell><Customers mode="view" /></AdminShell>} />
+            <Route path="/admin/customers/new" element={<AdminShell><Customers mode="new" /></AdminShell>} />
             <Route path="/admin/staff" element={<AdminShell><RequireAdmin><Staff /></RequireAdmin></AdminShell>} />
             <Route path="/admin/rates" element={<AdminShell><RequireAdmin><Rates /></RequireAdmin></AdminShell>} />
             <Route path="/admin/campaigns" element={<AdminShell><RequireAdmin><Campaigns /></RequireAdmin></AdminShell>} />

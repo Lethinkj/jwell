@@ -142,7 +142,7 @@ export default function InventoryDetail() {
             ) : (
               <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {sales.map((s: any) => (
-                  <div key={s.sale_item_id} style={{ border: '1px solid var(--color-border)', borderRadius: 8, padding: 12, background: '#FAF6F1' }}>
+                  <div key={s.sale_item_id} style={{ border: '1px solid var(--color-border)', borderRadius: 8, padding: 12, background: '#FFFFFF' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <div>
                         <strong>{s.invoice_no}</strong>
@@ -174,7 +174,7 @@ export default function InventoryDetail() {
                       <ResponsiveContainer><BarChart data={breakdown}>
                         <XAxis dataKey="name" fontSize={11} /><YAxis fontSize={11} />
                         <Tooltip formatter={(v: number) => inr(v)} />
-                        <Bar dataKey="value" fill="#C49A52" radius={6} />
+                        <Bar dataKey="value" fill="#D6B45C" radius={6} />
                       </BarChart></ResponsiveContainer>
                     </div>
                     <small style={{ color: 'var(--color-muted)' }}>
@@ -189,7 +189,7 @@ export default function InventoryDetail() {
                       <ResponsiveContainer><LineChart data={trend}>
                         <XAxis dataKey="d" fontSize={11} /><YAxis fontSize={11} />
                         <Tooltip formatter={(v: number) => inr(v)} />
-                        <Line dataKey="total" stroke="#8A6428" strokeWidth={2} dot />
+                        <Line dataKey="total" stroke="#B89A52" strokeWidth={2} dot />
                       </LineChart></ResponsiveContainer>
                     </div>
                   </div>

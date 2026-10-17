@@ -127,7 +127,7 @@ export default function ManualPieceModal({ defaultRate24k = 8000, onAddPiece, on
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(59, 48, 43, 0.65)',
+        backgroundColor: 'rgba(71, 16, 29, 0.65)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -149,7 +149,7 @@ export default function ManualPieceModal({ defaultRate24k = 8000, onAddPiece, on
           backgroundColor: '#fff',
           borderRadius: 14,
           padding: 22,
-          boxShadow: '0 20px 45px rgba(59,48,43,0.3)',
+          boxShadow: '0 20px 45px rgba(71,16,29,0.3)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, borderBottom: '1px solid var(--color-border)', paddingBottom: 10 }}>
@@ -306,7 +306,7 @@ export default function ManualPieceModal({ defaultRate24k = 8000, onAddPiece, on
         </div>
 
         {/* Live Calculation Preview */}
-        <div style={{ marginTop: 16, padding: 14, background: '#FAF6F1', borderRadius: 8, fontSize: 13 }}>
+        <div style={{ marginTop: 16, padding: 14, background: '#EFE5E5', borderRadius: 8, fontSize: 13 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
             <span>Calculated Gold Value:</span>
             <strong>{inr(goldValue)}</strong>

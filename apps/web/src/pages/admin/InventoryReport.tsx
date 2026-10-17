@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from 'recharts';
 import { api, inr } from '../../lib/api';
 
-const PIE_COLORS = ['#C49A52', '#8A6428', '#5C8A6A', '#7A6AAE', '#B0564A', '#4A86B0', '#999', '#555'];
+const PIE_COLORS = ['#D6B45C', '#B89A52', '#5C8A6A', '#7A6AAE', '#B0564A', '#4A86B0', '#999', '#555'];
 
 function monthKey(iso: string) {
   const d = new Date(iso);
@@ -70,12 +70,12 @@ export default function InventoryReport() {
         <div className="card"><strong>Monthly buying spend (₹)</strong><div style={{ height: 260 }}>
           <ResponsiveContainer><BarChart data={byMonth}>
             <XAxis dataKey="m" fontSize={11} /><YAxis fontSize={11} tickFormatter={(v: number) => `₹${(v / 100000).toFixed(1)}L`} />
-            <Tooltip formatter={(v: any) => inr(Number(v))} /><Bar dataKey="spend" fill="#C49A52" radius={6} />
+            <Tooltip formatter={(v: any) => inr(Number(v))} /><Bar dataKey="spend" fill="#D6B45C" radius={6} />
           </BarChart></ResponsiveContainer></div></div>
         <div className="card"><strong>Pieces added per month</strong><div style={{ height: 260 }}>
           <ResponsiveContainer><LineChart data={byMonth}>
             <XAxis dataKey="m" fontSize={11} /><YAxis fontSize={11} allowDecimals={false} />
-            <Tooltip /><Line dataKey="pieces" stroke="#8A6428" strokeWidth={2} dot={false} />
+            <Tooltip /><Line dataKey="pieces" stroke="#B89A52" strokeWidth={2} dot={false} />
           </LineChart></ResponsiveContainer></div></div>
       </div>
 

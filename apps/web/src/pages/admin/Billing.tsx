@@ -414,7 +414,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
           border: '1px solid var(--color-border)',
           borderRadius: 14,
           marginBottom: 20,
-          boxShadow: '0 2px 8px rgba(59,48,43,0.05)',
+          boxShadow: '0 2px 8px rgba(71,16,29,0.05)',
         }}
       >
         <div>
@@ -444,7 +444,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
           style={{
             marginBottom: 18,
             padding: '12px 18px',
-            backgroundColor: msg.type === 'error' ? '#FDE7E5' : msg.type === 'success' ? '#E3F3EA' : '#FFF9F2',
+            backgroundColor: msg.type === 'error' ? '#FDE7E5' : msg.type === 'success' ? '#E3F3EA' : '#FFFFFF',
             border: `1px solid ${msg.type === 'error' ? 'var(--color-error)' : msg.type === 'success' ? 'var(--color-success)' : 'var(--color-gold)'}`,
             color: msg.type === 'error' ? '#7A1F16' : msg.type === 'success' ? 'var(--color-success)' : 'var(--color-espresso)',
             display: 'flex',
@@ -471,11 +471,11 @@ export default function Billing({ mode = 'new' }: BillingProps) {
             <div
               className="card"
               style={{
-                background: 'linear-gradient(135deg, #FFF9F2 0%, #FFFFFF 100%)',
+                background: 'linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 100%)',
                 border: '2px solid var(--color-gold)',
                 borderRadius: 14,
                 padding: 24,
-                boxShadow: '0 8px 24px rgba(196,154,82,0.15)',
+                boxShadow: '0 8px 24px rgba(214,180,92,0.15)',
                 marginBottom: 20,
               }}
             >
@@ -562,7 +562,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                           padding: 14,
                           borderRadius: 10,
                           border: customerType === 'existing' ? '2px solid var(--color-gold-deep)' : '1px solid var(--color-border)',
-                          background: customerType === 'existing' ? '#FFF9F2' : '#FFFFFF',
+                          background: customerType === 'existing' ? 'var(--color-blush)' : '#FFFFFF',
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
                           display: 'flex',
@@ -588,7 +588,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                           padding: 14,
                           borderRadius: 10,
                           border: customerType === 'new' ? '2px solid var(--color-gold-deep)' : '1px solid var(--color-border)',
-                          background: customerType === 'new' ? '#FFF9F2' : '#FFFFFF',
+                          background: customerType === 'new' ? 'var(--color-blush)' : '#FFFFFF',
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
                           display: 'flex',
@@ -654,7 +654,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
 
                       {/* Multiple Phone Matches Picker */}
                       {phoneMatches.length > 0 && (
-                        <div style={{ marginTop: 14, background: '#FAF6F1', border: '1px solid var(--color-border)', borderRadius: 10, padding: 14 }}>
+                        <div style={{ marginTop: 14, background: '#FFFFFF', border: '1px solid var(--color-border)', borderRadius: 10, padding: 14 }}>
                           <strong style={{ fontSize: 13, color: 'var(--color-espresso)' }}>Multiple profiles share this number — select the customer:</strong>
                           <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {phoneMatches.map((m: any) => (
@@ -692,7 +692,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                   {customerType === 'new' && !customer && (
                     <div
                       style={{
-                        background: 'linear-gradient(180deg, #FAF6F1 0%, #FFFFFF 100%)',
+                        background: 'linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 100%)',
                         border: '1px solid var(--color-border)',
                         borderRadius: 12,
                         padding: 18,
@@ -857,7 +857,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                   {customer && (
                     <div
                       style={{
-                        background: 'linear-gradient(135deg, #FAF6F1 0%, #FFF9F2 100%)',
+                        background: 'linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 100%)',
                         borderRadius: 12,
                         border: '1.5px solid var(--color-gold)',
                         padding: 16,
@@ -887,7 +887,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                               <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-espresso)' }}>
                                 {customer.name}
                               </span>
-                              <span className="chip" style={{ margin: 0, padding: '2px 8px', fontSize: 11, background: '#EAE2D8' }}>
+                              <span className="chip" style={{ margin: 0, padding: '2px 8px', fontSize: 11, background: '#E8DDD6' }}>
                                 {customer.customer_code}
                               </span>
                               {(customer.summary?.bill_count > 1 || customer.purchase_count > 1) && (
@@ -916,7 +916,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                       {(customer.birthday || customer.anniversary) && (
                         <div style={{ display: 'flex', gap: 12, marginTop: 10, fontSize: 12 }}>
                           {customer.birthday && (
-                            <span className="chip" style={{ background: '#FFF0F5' }}>
+                            <span className="chip" style={{ background: '#F7E4E8' }}>
                               🎂 Birthday: <strong>{customer.birthday}</strong>
                             </span>
                           )}
@@ -944,7 +944,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                             <div style={{ marginTop: 8, maxHeight: 180, overflowY: 'auto', background: '#fff', borderRadius: 8, border: '1px solid var(--color-border)' }}>
                               <table className="tbl" style={{ width: '100%', fontSize: 12 }}>
                                 <thead>
-                                  <tr style={{ background: '#FAF6F1' }}>
+                                  <tr style={{ background: '#FFFFFF' }}>
                                     <th>Invoice</th>
                                     <th>Date</th>
                                     <th>Amount</th>
@@ -998,7 +998,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      background: '#FAF6F1',
+                      background: '#FFFFFF',
                       padding: '10px 14px',
                       borderRadius: 8,
                       marginBottom: 16,
@@ -1082,7 +1082,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                           padding: '48px 16px',
                           border: '1.5px dashed var(--color-border)',
                           borderRadius: 10,
-                          background: '#FAF6F1',
+                          background: '#FFFFFF',
                         }}
                       >
                         <div style={{ fontSize: 36, marginBottom: 8 }}>💍</div>
@@ -1103,7 +1103,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                       <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 8 }}>
                         <table className="tbl" style={{ width: '100%', margin: 0 }}>
                           <thead>
-                            <tr style={{ background: '#FAF6F1' }}>
+                            <tr style={{ background: '#FFFFFF' }}>
                               <th>Item &amp; SKU</th>
                               <th>Purity</th>
                               <th>Net Wt (g)</th>
@@ -1122,7 +1122,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                                   <div style={{ fontSize: 11, color: 'var(--color-muted)' }}>SKU: {l.sku}</div>
                                 </td>
                                 <td>
-                                  <span className="chip" style={{ margin: 0, padding: '2px 8px', fontSize: 11, background: '#FFF9F2', border: '1px solid var(--color-gold)' }}>
+                                  <span className="chip" style={{ margin: 0, padding: '2px 8px', fontSize: 11, background: '#FFFFFF', border: '1px solid var(--color-gold)' }}>
                                     {l.purity}
                                   </span>
                                 </td>
@@ -1147,7 +1147,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                             ))}
                           </tbody>
                           <tfoot>
-                            <tr style={{ background: '#FAF6F1', fontWeight: 700, borderTop: '2px solid var(--color-border)' }}>
+                            <tr style={{ background: '#FFFFFF', fontWeight: 700, borderTop: '2px solid var(--color-border)' }}>
                               <td colSpan={2}>Total ({lines.length} pieces)</td>
                               <td>{totalNetGoldWeight.toFixed(3)}g</td>
                               <td>{inr(lines.reduce((s, l) => s + (l.est?.gold_value_inr || 0), 0))}</td>
@@ -1196,7 +1196,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      background: '#FAF6F1',
+                      background: '#FFFFFF',
                       padding: '10px 14px',
                       borderRadius: 8,
                       marginBottom: 16,
@@ -1233,7 +1233,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                       display: 'grid',
                       gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                       gap: 14,
-                      background: '#FAF6F1',
+                      background: '#FFFFFF',
                       padding: 14,
                       borderRadius: 10,
                       marginBottom: 16,
@@ -1257,7 +1257,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                   {/* Discounts Section (Optional) */}
                   <div
                     style={{
-                      background: '#FFF9F2',
+                      background: '#FFFFFF',
                       border: '1px solid var(--color-border)',
                       borderRadius: 10,
                       padding: 16,
@@ -1353,12 +1353,12 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                   {/* EDITABLE FINAL PRICE BOX (MANDATORY) */}
                   <div
                     style={{
-                      background: '#FAF6F1',
+                      background: '#FFFFFF',
                       border: isFinalPriceManuallyEdited ? '2px solid var(--color-rose)' : '2px solid var(--color-gold)',
                       borderRadius: 12,
                       padding: 16,
                       marginBottom: 18,
-                      boxShadow: '0 2px 8px rgba(196,154,82,0.12)',
+                      boxShadow: '0 2px 8px rgba(214,180,92,0.12)',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -1418,7 +1418,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                     </div>
 
                     {isFinalPriceManuallyEdited && (
-                      <div style={{ marginTop: 8, padding: '6px 12px', background: '#FFF0F5', borderRadius: 6, fontSize: 12, color: 'var(--color-rose)', fontWeight: 500 }}>
+                      <div style={{ marginTop: 8, padding: '6px 12px', background: '#F7E4E8', borderRadius: 6, fontSize: 12, color: 'var(--color-rose)', fontWeight: 500 }}>
                         ✏️ Final price manually adjusted to {inr(effectiveFinalPrice)}. Total effective discount on bill: <strong>{inr(totalEffectiveDiscount)}</strong>.
                       </div>
                     )}
@@ -1464,7 +1464,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                         justifyContent: 'center',
                         alignItems: 'center',
                         gap: 10,
-                        boxShadow: lines.length > 0 ? '0 4px 14px rgba(138,100,40,0.3)' : 'none',
+                        boxShadow: lines.length > 0 ? '0 4px 14px rgba(184,154,82,0.3)' : 'none',
                       }}
                     >
                       {isFinalizing ? (
@@ -1536,7 +1536,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
             <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 10 }}>
               <table className="tbl" style={{ width: '100%', margin: 0 }}>
                 <thead>
-                  <tr style={{ background: '#FAF6F1' }}>
+                  <tr style={{ background: '#FFFFFF' }}>
                     <th style={{ width: 56 }}>S.No</th>
                     <th>Invoice No</th>
                     <th>Date &amp; Time</th>

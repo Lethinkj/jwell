@@ -7,7 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, L
 const PRESETS = [['today', 'Today'], ['week', 'Week'], ['month', 'Month'], ['3m', '3 months'], ['6m', '6 months'], ['1y', '1 year']];
 
 export default function Dashboard() {
-  const [preset, setPreset] = useState('month');
+  const [preset, setPreset] = useState('today');
   const { data, isLoading, isError } = useQuery({ queryKey: ['rep-sales', preset], queryFn: () => api.get(`/reports/sales?preset=${preset}`) });
   const r = data?.data;
   return (
@@ -20,10 +20,10 @@ export default function Dashboard() {
         : <>
           <div className="grid kpi">
             {([
-              { label: 'Revenue', value: inr(r.revenue), icon: ICONS.wallet, tint: '#C49A52' },
-              { label: 'Bills', value: r.bill_count, icon: ICONS.receipt, tint: '#8D5668' },
+              { label: 'Revenue', value: inr(r.revenue), icon: ICONS.wallet, tint: '#D6B45C' },
+              { label: 'Bills', value: r.bill_count, icon: ICONS.receipt, tint: '#631628' },
               { label: 'Avg bill', value: inr(r.avg_bill), icon: ICONS.calculator, tint: '#26734D' },
-              { label: 'Items sold', value: r.items_sold, icon: ICONS.gem, tint: '#B08437' },
+              { label: 'Items sold', value: r.items_sold, icon: ICONS.gem, tint: '#B89A52' },
               { label: 'Gold sold', value: `${Number(r.gold_weight_g).toFixed(2)} g`, icon: ICONS.scale, tint: '#5B6B8C' },
               { label: 'Gross profit est.', value: r.gross_profit_estimate == null ? 'restricted' : inr(r.gross_profit_estimate), icon: ICONS.trending, tint: '#946200' },
             ] as const).map((k) => (
@@ -37,8 +37,8 @@ export default function Dashboard() {
             ))}
           </div>
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', marginTop: 16 }}>
-            <div className="card"><strong>Revenue trend</strong><div style={{ height: 220 }}><ResponsiveContainer><LineChart data={r.byDay}><XAxis dataKey="d" fontSize={11} /><YAxis fontSize={11} /><Tooltip /><Line dataKey="revenue" stroke="#8A6428" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div></div>
-            <div className="card"><strong>Payment mix</strong><div style={{ height: 220 }}><ResponsiveContainer><BarChart data={r.byPay}><XAxis dataKey="method" fontSize={11} /><YAxis fontSize={11} /><Tooltip /><Bar dataKey="total" fill="#C49A52" radius={6} /></BarChart></ResponsiveContainer></div></div>
+            <div className="card"><strong>Revenue trend</strong><div style={{ height: 220 }}><ResponsiveContainer><LineChart data={r.byDay}><XAxis dataKey="d" fontSize={11} /><YAxis fontSize={11} /><Tooltip /><Line dataKey="revenue" stroke="#B89A52" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div></div>
+            <div className="card"><strong>Payment mix</strong><div style={{ height: 220 }}><ResponsiveContainer><BarChart data={r.byPay}><XAxis dataKey="method" fontSize={11} /><YAxis fontSize={11} /><Tooltip /><Bar dataKey="total" fill="#D6B45C" radius={6} /></BarChart></ResponsiveContainer></div></div>
           </div>
           <div className="card" style={{ marginTop: 16 }}><strong>Category sales</strong>
             <div className="tbl-wrap"><table className="tbl"><thead><tr><th>Category</th><th>Pieces</th><th>Revenue</th></tr></thead>
