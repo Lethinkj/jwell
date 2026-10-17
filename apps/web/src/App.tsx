@@ -21,6 +21,7 @@ import Settings from './pages/admin/Settings';
 import EmailSettings from './pages/admin/EmailSettings';
 import AuditLogs from './pages/admin/AuditLogs';
 import AdminBreadcrumbs from './components/AdminBreadcrumbs';
+import CampaignReminderModal from './components/CampaignReminderModal';
 import { Icon, ICONS } from './components/icons';
 import { api } from './lib/api';
 import { useQuery } from '@tanstack/react-query';
@@ -176,6 +177,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         </header>
         {children}
       </div>
+      <CampaignReminderModal />
     </div>
   );
 }

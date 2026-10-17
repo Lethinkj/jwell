@@ -17,6 +17,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(r.token);
     setUser(r.user);
   };
-  const logout = () => { setToken(''); setUser(null); };
+  const logout = () => {
+    setToken(''); setUser(null);
+    try {
+      Object.keys(sessionStorage).filter((k) => k.startsWith('campaign_reminder_closed:')).forEach((k) => sessionStorage.removeItem(k));
+    } catch { /* ignore */ }
+  };
   return <Ctx.Provider value={{ user, loading, login, logout }}>{children}</Ctx.Provider>;
 }

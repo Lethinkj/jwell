@@ -31,7 +31,10 @@ export default function Campaigns() {
   const [compose, setCompose] = useState<Compose | null>(null);
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState('');
-  const [form, setForm] = useState({ name: '', template: 'Sparkle this Diwali ✨ Flat ₹1000 off above ₹50,000. Code FEST10. — Shree Gold Palace', channel: 'whatsapp', mode: 'manual', offer_code: 'FEST10' });
+  const [form, setForm] = useState({ name: '', template: 'Sparkle this Diwali ✨ Flat ₹1000 off above ₹50,000. Code FEST10. — Shree Gold Palace', channel: 'whatsapp', mode: 'manual', offer_code: 'FEST10', schedule_at: '' });
+  const [busy, setBusy] = useState('');
+  const [editing, setEditing] = useState<any | null>(null);
+  const [editMsg, setEditMsg] = useState('');
 
   const up = upcoming.data?.data;
   const days = up?.window?.days ?? 10;
@@ -43,15 +46,48 @@ export default function Campaigns() {
   const ph = emailSettings.data?.data?.placeholders || {};
 
   const create = async () => {
+    if (!form.name.trim()) { setMsg('Please name the campaign.'); return; }
     try {
-      const r = await api.post('/campaigns', { ...form, audience: {} });
-      setMsg(`Queued to ${r.data.queued} opted-in recipients. Manual mode needs approval before send.`);
+      const schedule_at = form.schedule_at ? new Date(form.schedule_at).toISOString() : null;
+      const r = await api.post('/campaigns', { ...form, schedule_at, audience: {} });
+      const when = schedule_at ? ` It will send automatically on ${new Date(schedule_at).toLocaleString()}.` : '';
+      setMsg(form.mode === 'manual'
+        ? `Queued to ${r.data.queued} opted-in recipient(s). Approve it to send.${when}`
+        : `Queued to ${r.data.queued} opted-in recipient(s).${when}`);
+      setForm({ ...form, name: '', schedule_at: '' });
       camps.refetch();
     } catch (e: any) { setMsg(e.message); }
   };
-  const step = async (id: string, action: string) => {
-    try { const r = await api.post(`/campaigns/${id}/${action}`); setMsg(JSON.stringify(r.data)); camps.refetch(); }
-    catch (e: any) { setMsg(e.message); }
+  const act = async (id: string, action: 'approve' | 'send' | 'remind') => {
+    setBusy(`${id}:${action}`); setMsg('');
+    try {
+      const body = action === 'remind' ? { hours: 24 } : undefined;
+      const r = await api.post(`/campaigns/${id}/${action}`, body);
+      if (action === 'send') setMsg(`Sent to ${r.data.sent} recipient(s)${r.data.skipped ? `, skipped ${r.data.skipped} opted-out` : ''}.`);
+      else if (action === 'approve') setMsg('Campaign approved.');
+      else setMsg('Reminder snoozed for 24 hours.');
+      camps.refetch();
+    } catch (e: any) { setMsg(e.message); } finally { setBusy(''); }
+  };
+  const statusOf = (c: any) => c.sent_at ? { label: 'Sent', cls: 'ok' } : c.approval_status === 'approved' ? { label: 'Approved', cls: 'ok' } : { label: 'Pending approval', cls: 'warn' };
+  const fmtDate = (s: string | null) => s ? new Date(s).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+  const toLocalInput = (s: string | null) => {
+    if (!s) return '';
+    const d = new Date(s);
+    const off = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - off).toISOString().slice(0, 16);
+  };
+  const saveEdit = async () => {
+    if (!editing) return;
+    setBusy(`${editing.id}:edit`); setEditMsg('');
+    try {
+      await api.patch(`/campaigns/${editing.id}`, {
+        name: editing.name, template: editing.template, channel: editing.channel,
+        mode: editing.mode, offer_code: editing.offer_code || null,
+        schedule_at: editing.schedule_at ? new Date(editing.schedule_at).toISOString() : null,
+      });
+      setEditing(null); setMsg('Campaign updated.'); camps.refetch();
+    } catch (e: any) { setEditMsg(e.message); } finally { setBusy(''); }
   };
 
   const sendAll = async (kind: Compose['kind'], festivalId?: string, label?: string) => {
@@ -167,19 +203,52 @@ export default function Campaigns() {
             <select value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })}><option value="manual">Manual + approval</option><option value="automatic">Automatic</option></select>
             <input value={form.offer_code} onChange={(e) => setForm({ ...form, offer_code: e.target.value })} placeholder="Offer code" />
           </div>
+          <label className="lbl">Send date &amp; time</label>
+          <input type="datetime-local" value={form.schedule_at} onChange={(e) => setForm({ ...form, schedule_at: e.target.value })} />
+          <div style={{ color: 'var(--color-muted)', fontSize: 12, margin: '6px 0 10px' }}>
+            {form.schedule_at ? `Will send automatically on ${new Date(form.schedule_at).toLocaleString()}.` : 'Leave blank to approve and send manually (you’ll be asked on login).'}
+          </div>
           <button className="btn gold" onClick={create}>Queue campaign</button>
         </div>
         <div className="card"><strong>Campaigns</strong>
-          {(camps.data?.data || []).map((c: any) => (
-            <div key={c.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
-              <strong>{c.name}</strong> <span className={`badge ${c.approval_status === 'approved' ? 'ok' : 'warn'}`}>{c.approval_status}</span><br />
-              <small style={{ color: 'var(--color-muted)' }}>{c.channel} • {c.mode} • {c.offer_code || 'no offer'}</small>
-              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                <button className="btn ghost" onClick={() => step(c.id, 'approve')}>Approve</button>
-                <button className="btn" onClick={() => step(c.id, 'send')}>Send now</button>
-              </div>
-            </div>))}
-          {!(camps.data?.data || []).length && <div className="empty">No campaigns yet.</div>}
+          <div className="tbl-wrap" style={{ marginTop: 8, maxHeight: 420, overflowY: 'auto' }}>
+            <table className="tbl">
+              <thead><tr><th>Name</th><th>Channel</th><th>Mode</th><th>Offer</th><th>Scheduled</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                {(camps.data?.data || []).map((c: any) => {
+                  const st = statusOf(c);
+                  const sent = !!c.sent_at;
+                  return (
+                    <tr key={c.id}>
+                      <td>{c.name}</td>
+                      <td>{c.channel}</td>
+                      <td>{c.mode}</td>
+                      <td>{c.offer_code || '—'}</td>
+                      <td><small>{fmtDate(c.schedule_at)}</small></td>
+                      <td><span className={`badge ${st.cls}`}>{st.label}</span></td>
+                      <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {sent ? (
+                          <span style={{ color: 'var(--color-muted)', fontSize: 12 }}>Sent {fmtDate(c.sent_at)}</span>
+                        ) : c.mode === 'automatic' ? (
+                          <button className="btn ghost" disabled={busy === `${c.id}:edit`} onClick={() => { setEditMsg(''); setEditing({ ...c, schedule_at: toLocalInput(c.schedule_at) }); }}>
+                            {c.schedule_at ? 'Edit schedule' : 'Set date'}
+                          </button>
+                        ) : c.approval_status !== 'approved' ? (
+                          <button className="btn ghost" disabled={busy === `${c.id}:approve`} onClick={() => act(c.id, 'approve')}>Approve</button>
+                        ) : (
+                          <>
+                            <button className="btn" disabled={busy === `${c.id}:send`} onClick={() => act(c.id, 'send')}>Send now</button>
+                            <button className="btn ghost" disabled={busy === `${c.id}:remind`} onClick={() => act(c.id, 'remind')}>Remind later</button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!(camps.data?.data || []).length && <tr><td colSpan={7} style={{ color: 'var(--color-muted)' }}>No campaigns yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -196,6 +265,36 @@ export default function Campaigns() {
           onClose={() => setCompose(null)}
           onSend={doSend}
         />
+      )}
+
+      {editing && (
+        <div onClick={() => setEditing(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(71,16,29,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()} className="card" style={{ background: '#FFFFFF', maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto', borderTop: '4px solid var(--color-gold-deep)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>Edit campaign</h3>
+              <button className="btn ghost" onClick={() => setEditing(null)}>✕</button>
+            </div>
+            {editMsg && <div className="card" style={{ marginTop: 10, fontSize: 13 }}>{editMsg}</div>}
+            <label className="lbl">Name</label>
+            <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+            <label className="lbl">Template</label>
+            <textarea rows={3} value={editing.template} onChange={(e) => setEditing({ ...editing, template: e.target.value })} />
+            <div className="filters" style={{ marginTop: 8 }}>
+              <select value={editing.channel} onChange={(e) => setEditing({ ...editing, channel: e.target.value })}><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="both">Both</option></select>
+              <select value={editing.mode} onChange={(e) => setEditing({ ...editing, mode: e.target.value })}><option value="manual">Manual + approval</option><option value="automatic">Automatic</option></select>
+              <input value={editing.offer_code || ''} onChange={(e) => setEditing({ ...editing, offer_code: e.target.value })} placeholder="Offer code" />
+            </div>
+            <label className="lbl">Send date &amp; time</label>
+            <input type="datetime-local" value={editing.schedule_at || ''} onChange={(e) => setEditing({ ...editing, schedule_at: e.target.value })} />
+            <div style={{ color: 'var(--color-muted)', fontSize: 12, margin: '6px 0 10px' }}>
+              {editing.schedule_at ? `Will send automatically on ${new Date(editing.schedule_at).toLocaleString()}.` : 'No date — approve and send manually.'}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn gold" disabled={busy === `${editing.id}:edit`} onClick={saveEdit}>{busy === `${editing.id}:edit` ? 'Saving…' : 'Save changes'}</button>
+              <button className="btn ghost" onClick={() => setEditing(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

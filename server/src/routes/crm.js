@@ -2,6 +2,7 @@ const express = require('express');
 const { get, all, run, nowFn, dayExpr, uid } = require('../db');
 const { auth, requireRoles, audit } = require('../middleware/auth');
 const { normalizePhone, isValidPhone } = require('../services/phone');
+const campaignSvc = require('../services/campaigns');
 
 const router = express.Router();
 router.use(auth);
@@ -181,31 +182,43 @@ router.post('/campaigns', requireRoles('admin'), async (req, res) => {
   audit(req.user.user_id, 'campaign.create', 'campaign', id, `${name} → ${queued} opted-in recipients`);
   res.status(201).json({ data: { ...(await get('SELECT * FROM campaigns WHERE id=?', id)), queued } });
 });
+router.patch('/campaigns/:id', requireRoles('admin'), async (req, res) => {
+  const cam = await get('SELECT * FROM campaigns WHERE id=? AND shop_id=?', req.params.id, req.user.shop_id);
+  if (!cam) return res.status(404).json({ error: 'not_found' });
+  if (cam.sent_at) return res.status(409).json({ error: 'already_sent', message: 'A sent campaign can no longer be edited' });
+  const { name, channel, mode, trigger_type, template, offer_code, schedule_at } = req.body || {};
+  const approval = mode === 'automatic' ? 'approved' : cam.approval_status;
+  const pick = (v, cur) => (v === undefined ? cur : (v ?? null));
+  await run(`UPDATE campaigns SET name=?, channel=?, mode=?, trigger_type=?, template=?, offer_code=?, schedule_at=?, approval_status=? WHERE id=? AND shop_id=?`,
+    pick(name, cam.name), pick(channel, cam.channel), pick(mode, cam.mode), pick(trigger_type, cam.trigger_type),
+    pick(template, cam.template), pick(offer_code, cam.offer_code), pick(schedule_at, cam.schedule_at),
+    approval, cam.id, req.user.shop_id);
+  audit(req.user.user_id, 'campaign.update', 'campaign', cam.id, String(name ?? cam.name));
+  res.json({ data: await get('SELECT * FROM campaigns WHERE id=?', cam.id) });
+});
 router.post('/campaigns/:id/approve', requireRoles('admin'), async (req, res) => {
   await run(`UPDATE campaigns SET approval_status='approved' WHERE id=?`, req.params.id);
   audit(req.user.user_id, 'campaign.approve', 'campaign', req.params.id, 'approved');
   res.json({ data: await get('SELECT * FROM campaigns WHERE id=?', req.params.id) });
 });
+// Approved-but-unsent campaigns due to be sent — drives the login prompt.
+router.get('/campaigns/reminders', requireRoles('admin'), async (req, res) => {
+  res.json({ data: await campaignSvc.listReminders(req.user.shop_id) });
+});
 router.post('/campaigns/:id/send', requireRoles('admin'), async (req, res) => {
-  const cam = await get('SELECT * FROM campaigns WHERE id=?', req.params.id);
-  if (!cam) return res.status(404).json({ error: 'not_found' });
-  if (cam.approval_status !== 'approved') return res.status(409).json({ error: 'not_approved', message: 'Manual campaigns need explicit approval (§10 acceptance)' });
-  // Mock provider send with bounded outcome + delivery log (production: queue/worker + webhooks)
-  const pending = await all(`SELECT r.*, c.phone, c.marketing_consent FROM campaign_recipients r JOIN customers c ON c.id=r.customer_id
-    WHERE r.campaign_id=? AND r.status='queued'`, cam.id);
-  let sent = 0, skipped = 0;
-  for (const r of pending) {
-    if (!r.marketing_consent) {
-      await run(`UPDATE campaign_recipients SET status='skipped', error=? WHERE id=?`, 'opted-out', r.id);
-      skipped++;
-      continue;
-    }
-    await run(`UPDATE campaign_recipients SET status='sent', provider_message_id=?, sent_at=${nowFn()} WHERE id=?`,
-      `mock_${r.id}`, r.id);
-    sent++;
+  try {
+    res.json({ data: await campaignSvc.sendCampaign(req.params.id, { actorId: req.user.user_id }) });
+  } catch (e) {
+    res.status(e.status || 400).json({ error: e.code || 'error', message: e.message });
   }
-  audit(req.user.user_id, 'campaign.send', 'campaign', cam.id, `sent ${sent}, skipped ${skipped}`);
-  res.json({ data: { sent, skipped } });
+});
+// Snooze the login prompt ("Remind later").
+router.post('/campaigns/:id/remind', requireRoles('admin'), async (req, res) => {
+  const hours = Number(req.body?.hours) || 24;
+  const data = await campaignSvc.snoozeCampaign(req.params.id, req.user.shop_id, hours);
+  if (!data) return res.status(404).json({ error: 'not_found' });
+  audit(req.user.user_id, 'campaign.remind', 'campaign', req.params.id, `snoozed ${hours}h`);
+  res.json({ data });
 });
 router.post('/webhooks/messaging-provider', async (req, res) => {
   // Verify signature in production; dedupe by provider_message_id (§9).

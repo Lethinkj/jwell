@@ -75,6 +75,8 @@ if (require.main === module) {
   app.ready.then(() => {
     // Daily birthday/anniversary/festival greetings (opt-in per shop).
     require('./services/occasions').startOccasionScheduler();
+    // Send approved campaigns whose schedule date has arrived.
+    require('./services/campaigns').startCampaignScheduler();
     const srv = app.listen(PORT, () => console.log(`[server] Gold Shop API on http://localhost:${PORT} (db: Supabase Postgres)`));
     srv.on('error', (e) => {
       if (e && e.code === 'EADDRINUSE') {
