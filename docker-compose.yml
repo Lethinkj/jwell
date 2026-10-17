@@ -1,0 +1,57 @@
+# Demo deployment for the Gold Shop platform.
+#
+# Topology (Option B — dedicated port; see deploy/apache/subdomain-vhost.conf):
+#   Internet -> Apache / Webuzo (demo.marvelslice.com, TLS on 80/443)
+#             -> 127.0.0.1:8083
+#                -> goldshop-web (nginx: SPA + /api proxy)
+#                   -> goldshop-api :4000 -> Supabase Postgres
+#
+# Service names are prefixed (goldshop-*) so this stack can also join a shared
+# network (e.g. lms-network) without clashing with web/api/postgres/redis there.
+#
+# Usage:
+#   cp .env.example .env      # DATABASE_URL, JWT_SECRET, SMTP_* …
+#   docker compose up -d --build
+#   docker compose logs -f goldshop-api
+
+services:
+  goldshop-api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    image: gold-shop/api:latest
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+    expose:
+      - "4000"
+    # Self-hosted Supabase on this VPS publishes Postgres on the HOST loopback
+    # (e.g. 127.0.0.1:54329). From inside a container, 127.0.0.1 is the container
+    # itself, so point DATABASE_URL at host.docker.internal instead.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    networks:
+      - app
+
+  goldshop-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: gold-shop/web:latest
+    depends_on:
+      goldshop-api:
+        condition: service_healthy
+    ports:
+      # Loopback only. 8083 = first free port after your existing 8080/8081/8082.
+      # Override with WEB_PORT=8090 docker compose up -d if 8083 is taken.
+      - "127.0.0.1:${WEB_PORT:-8083}:80"
+    restart: unless-stopped
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge

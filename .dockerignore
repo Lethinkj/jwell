@@ -1,0 +1,37 @@
+# Build context for both images is the repo ROOT (see docker-compose.yml):
+# the API needs the monorepo layout for its relative require of packages/pricing
+# and for supabase/migrations. Keep this list tight so the context stays small.
+
+.git
+.gitignore
+.github
+
+# Secrets — never bake into an image. Real values arrive at runtime via env_file.
+.env
+.env.*
+!.env.example
+
+# Installed / built on the host; each image installs and builds its own.
+node_modules
+**/node_modules
+dist
+**/dist
+
+# Local DB / data (server is Postgres-only, but guard anyway).
+data
+server/data
+*.db
+*.db-journal
+*.db-wal
+
+# Docs / editor / OS cruft.
+docs
+*.md
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Logs.
+npm-debug.log*
+*.log
