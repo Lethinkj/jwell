@@ -55,17 +55,20 @@ docker ps --format 'table {{.Names}}\t{{.Ports}}'
    $EDITOR .env
    ```
 
-   **`DATABASE_URL`** — use your **Supabase Cloud** project's direct connection
-   string (Project Settings → Database → Connection string → URI):
+   **`DATABASE_URL`** — use your **Supabase Cloud** project's **Session pooler**
+   string (Project Settings → Database → Connection string → **Session pooler**):
 
    ```env
-   DATABASE_URL=postgresql://postgres:<db-password>@db.<project-ref>.supabase.co:5432/postgres
+   DATABASE_URL=postgresql://postgres.<project-ref>:<db-password>@aws-0-<region>.pooler.supabase.com:5432/postgres
    ```
 
-   No local network wiring is needed — the container dials out to Supabase over the
-   internet. Use the **direct** connection (port 5432), not the pooler, for
-   `migrate`/`seed`. Also set a **new** `JWT_SECRET` (32+ random chars) and the
-   `SMTP_*` values.
+   Why the pooler: the direct host (`db.<project-ref>.supabase.co`) is **IPv6-only**,
+   and most VPSes have no IPv6 — that fails with `connect ENETUNREACH`. The pooler
+   is IPv4. Two things differ from the direct string: the username is
+   `postgres.<project-ref>` (not `postgres`), and the host is the pooler host. Use
+   **Session** mode (port **5432**), not the transaction pooler on 6543 — the API
+   keeps a connection pool and runs migrations. Also set a **new** `JWT_SECRET`
+   (32+ random chars) and the `SMTP_*` values.
 4. Apply schema + demo data once (the API also runs migrations on boot):
 
    ```bash
@@ -129,6 +132,11 @@ docker compose logs -f goldshop-api
 
 - **`goldshop-api` exits at boot with "Missing DATABASE_URL"** — `.env` isn't
   next to `docker-compose.yml`, or `env_file` couldn't read it.
+- **`DB init failed: connect ENETUNREACH <ipv6-address>:5432`** — you're using the
+  IPv6-only direct Supabase host on a VPS without IPv6. Switch `DATABASE_URL` to
+  the **Session pooler** (IPv4) string; see "One-time server setup".
+- **`Tenant or user not found`** — using the pooler with username `postgres`
+  instead of `postgres.<project-ref>`.
 - **SSL errors connecting to Postgres** — the pool hardcodes
   `ssl: { rejectUnauthorized: false }` (`server/src/db.js:41`), which is correct
   for Supabase Cloud (SSL is required). If you ever point `DATABASE_URL` at a

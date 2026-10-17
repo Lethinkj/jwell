@@ -13,7 +13,11 @@ It looks like:
 ```
 postgresql://postgres:<db-password>@db.<project-ref>.supabase.co:5432/postgres
 ```
-Use the **direct connection** (port 5432), not the pooler, for migrate/seed.
+Use the **direct connection** (port 5432) if your machine has IPv6. On an
+IPv4-only host the direct `db.<ref>.supabase.co` host is unreachable
+(`connect ENETUNREACH`) — use the **Session pooler** on port 5432 instead, with
+username `postgres.<project-ref>` and host `aws-0-<region>.pooler.supabase.com`.
+Both work for migrate/seed; the pooler is the IPv4-safe choice.
 
 ## 3. Create the tables (pick one)
 - **Option A — SQL Editor (easiest):** open Supabase SQL Editor, paste the full
