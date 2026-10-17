@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { api, inr } from '../../lib/api';
+import { barcodeDataUrl, barcodeFilename, downloadBarcode } from '../../lib/barcode';
 import { pieceImage, onImgError } from '../../lib/images';
 import { useAuth } from '../../hooks/auth';
 import InvoiceModal from '../../components/InvoiceModal';
@@ -28,6 +29,11 @@ export default function InventoryDetail() {
   const img = p ? pieceImage({ image_url: p.image_url, category_slug: p.category_slug }) : '';
   const sales: any[] = p?.sales || [];
   const last = sales[0];
+  const barcodes: any[] = p?.barcodes || [];
+  const activeBarcode = barcodes.find((b) => b.active);
+  const barcodePreview = useMemo(
+    () => (activeBarcode ? barcodeDataUrl(activeBarcode.barcode_value, { scale: 3, height: 14, includetext: true }) : null),
+    [activeBarcode?.barcode_value]);
 
   // Recharts data — value composition of each sale of this piece.
   const breakdown = last ? [
@@ -67,16 +73,36 @@ export default function InventoryDetail() {
                 style={{ width: '100%', borderRadius: 12, border: '1px solid var(--color-border)' }} />
               <span className={`badge ${statusBadge(p.status)}`} style={{ position: 'absolute', top: 10, right: 10 }}>{p.status}</span>
             </div>
-            {((p.barcodes || []).length > 0) && (
+            {barcodes.length > 0 && (
               <div className="card" style={{ marginTop: 12 }}>
-                <strong>Barcodes</strong>
-                <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {p.barcodes.map((b: any) => (
-                    <span key={b.id} className="chip" style={{ opacity: b.active ? 1 : 0.45 }}>
-                      {b.barcode_value}{!b.active ? ' (inactive)' : ''}
-                    </span>
-                  ))}
-                </div>
+                <strong>Barcode</strong>
+                {activeBarcode ? (
+                  <div style={{ marginTop: 8, textAlign: 'center' }}>
+                    {barcodePreview && (
+                      <img src={barcodePreview} alt={activeBarcode.barcode_value}
+                        style={{ maxWidth: '100%', border: '1px solid var(--color-border)', borderRadius: 6, background: '#fff' }} />
+                    )}
+                    <div style={{ marginTop: 4, letterSpacing: 1, fontWeight: 600 }}>{activeBarcode.barcode_value}</div>
+                    <button className="btn gold" style={{ marginTop: 8 }}
+                      onClick={() => downloadBarcode(activeBarcode.barcode_value, barcodeFilename(p.sku))}>
+                      ⬇ Download barcode (PNG)
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 6, color: 'var(--color-muted)' }}>No active barcode.</div>
+                )}
+                {barcodes.length > (activeBarcode ? 1 : 0) && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>All barcodes</div>
+                    <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {barcodes.map((b: any) => (
+                        <span key={b.id} className="chip" style={{ opacity: b.active ? 1 : 0.45 }}>
+                          {b.barcode_value}{!b.active ? ' (inactive)' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

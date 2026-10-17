@@ -18,6 +18,7 @@ import Rates from './pages/admin/Rates';
 import Campaigns from './pages/admin/Campaigns';
 import Reports from './pages/admin/Reports';
 import Settings from './pages/admin/Settings';
+import EmailSettings from './pages/admin/EmailSettings';
 import AuditLogs from './pages/admin/AuditLogs';
 import AdminBreadcrumbs from './components/AdminBreadcrumbs';
 import { Icon, ICONS } from './components/icons';
@@ -36,6 +37,7 @@ const NAV_RATES: NavItem = { to: '/admin/rates', label: 'Gold Rates', icon: ICON
 const NAV_CAMPAIGNS: NavItem = { to: '/admin/campaigns', label: 'Offers & Campaigns', icon: ICONS.campaigns };
 const NAV_REPORTS: NavItem = { to: '/admin/reports', label: 'Reports', icon: ICONS.reports };
 const NAV_SETTINGS: NavItem = { to: '/admin/settings', label: 'Settings', icon: ICONS.settings };
+const NAV_EMAIL: NavItem = { to: '/admin/email', label: 'Email', icon: ICONS.mail };
 const NAV_AUDIT: NavItem = { to: '/admin/audit', label: 'Audit Logs', icon: ICONS.audit };
 
 function RatePill() {
@@ -138,6 +140,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
           <>
             <div className="sidebar-section">System</div>
             {navLink(NAV_SETTINGS)}
+            {navLink(NAV_EMAIL)}
             {navLink(NAV_AUDIT)}
           </>
         )}
@@ -199,6 +202,7 @@ export default function App() {
             <Route path="/admin/campaigns" element={<AdminShell><RequireAdmin><Campaigns /></RequireAdmin></AdminShell>} />
             <Route path="/admin/reports" element={<AdminShell><RequireAdmin><Reports /></RequireAdmin></AdminShell>} />
             <Route path="/admin/settings" element={<AdminShell><RequireAdmin><Settings /></RequireAdmin></AdminShell>} />
+            <Route path="/admin/email" element={<AdminShell><RequireAdmin><EmailSettings /></RequireAdmin></AdminShell>} />
             <Route path="/admin/audit" element={<AdminShell><RequireAdmin><AuditLogs /></RequireAdmin></AdminShell>} />
           </Routes>
         </BrowserRouter>

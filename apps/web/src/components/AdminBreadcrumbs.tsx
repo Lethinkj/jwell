@@ -44,6 +44,8 @@ export default function AdminBreadcrumbs() {
     crumbs.push({ label: 'Reports & Analytics' });
   } else if (path === '/admin/settings') {
     crumbs.push({ label: 'Store Settings' });
+  } else if (path === '/admin/email') {
+    crumbs.push({ label: 'Email' });
   } else if (path === '/admin/audit') {
     crumbs.push({ label: 'Audit Logs' });
   } else {

@@ -100,7 +100,7 @@ async function withTransaction(fn) {
 }
 
 let _ready = null;
-const MIGRATIONS = ['0001_init', '0002_roles_staff', '0003_offers_created_at'];
+const MIGRATIONS = ['0001_init', '0002_roles_staff', '0003_offers_created_at', '0004_email_settings'];
 const migFile = (m) => fs.readFileSync(
   path.join(__dirname, '..', '..', 'supabase', 'migrations', `${m}_pg.sql`), 'utf8');
 

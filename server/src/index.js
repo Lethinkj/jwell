@@ -55,6 +55,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true, db: 'supabase-postgres
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/admin', require('./routes/email'));
 app.use('/api', require('./routes/catalog'));
 app.use('/api', require('./routes/ops'));
 app.use('/api', require('./routes/sales'));

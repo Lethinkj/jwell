@@ -9,6 +9,7 @@ if (!process.env.DATABASE_URL && !process.env.SUPABASE_DB_URL) {
   throw new Error('Missing DATABASE_URL for tests. Set it to your Supabase/test Postgres connection string.');
 }
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret-32chars-minimum-xxxxxx';
+process.env.MAIL_DISABLED = 'true'; // never send real email from tests
 
 const app = require('../src/index');
 const { get, run, uid } = require('../src/db');
@@ -192,6 +193,8 @@ test('close server', async () => { globalThis.__srv.close(); });
 after(async () => {
   if (!shopId) return;
   const cleanup = [
+    `DELETE FROM email_messages WHERE shop_id = ?`,
+    `DELETE FROM email_templates WHERE shop_id = ?`,
     `DELETE FROM payments WHERE sale_id IN (SELECT id FROM sales WHERE shop_id = ?)`,
     `DELETE FROM returns_refunds WHERE sale_id IN (SELECT id FROM sales WHERE shop_id = ?)`,
     `DELETE FROM sale_items WHERE sale_id IN (SELECT id FROM sales WHERE shop_id = ?)`,

@@ -8,6 +8,7 @@ if (!process.env.DATABASE_URL && !process.env.SUPABASE_DB_URL) {
   throw new Error('Missing DATABASE_URL for tests. Set it to your Supabase/test Postgres connection string.');
 }
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret-32chars-minimum-xxxxxx';
+process.env.MAIL_DISABLED = 'true'; // never send real email from tests
 
 const app = require('../src/index');
 

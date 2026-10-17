@@ -16,6 +16,7 @@ async function req(path: string, opts: RequestInit = {}) {
 export const api = {
   get: (p: string) => req(p),
   post: (p: string, b?: unknown) => req(p, { method: 'POST', body: JSON.stringify(b || {}) }),
+  put: (p: string, b?: unknown) => req(p, { method: 'PUT', body: JSON.stringify(b || {}) }),
   patch: (p: string, b?: unknown) => req(p, { method: 'PATCH', body: JSON.stringify(b || {}) }),
   login: (email: string, password: string) => req('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 };

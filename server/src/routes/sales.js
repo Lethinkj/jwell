@@ -155,6 +155,14 @@ router.post('/sales/:id/finalize', requireRoles('admin', 'billing'), async (req,
   } catch (e) { return res.status(409).json({ error: 'finalize_failed', message: e.message }); }
   const done = await get('SELECT * FROM sales WHERE id=?', sale.id);
   audit(req.user.user_id, 'sale.finalize', 'sale', sale.id, `${done.invoice_no} ₹${done.total_inr}${fresh.status === 'stale' ? ' (STALE RATE acknowledged)' : ''}`);
+  // Thank-you email (fire-and-forget — email problems must never fail a sale).
+  if (sale.customer_id) {
+    const cust = await get('SELECT * FROM customers WHERE id=?', sale.customer_id);
+    if (cust && cust.email) {
+      const { sendPurchaseThankYou } = require('../services/email');
+      sendPurchaseThankYou(req.user.shop_id, done, cust).catch(() => { /* logged inside */ });
+    }
+  }
   res.json({ data: { ...done, lines: await all('SELECT * FROM sale_items WHERE sale_id=?', sale.id), payments: await all('SELECT * FROM payments WHERE sale_id=?', sale.id), rate_snapshot: rate, rate_warning: fresh.status === 'stale' ? `Rate ${fresh.ageMinutes} min old` : null } });
 });
 
