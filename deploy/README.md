@@ -88,6 +88,10 @@ file. That's why there is deliberately no `.env.production`:
 - `docker compose` reads `.env` and sets those variables in each container's
   environment. The API reads `process.env` (its `dotenv` call never overrides real
   env vars), so the server's `.env` **is** the production config.
+- **For Docker, use the root `.env`** (next to `docker-compose.yml`). `server/.env`
+  is for local `npm run dev` only — the container never reads it, because
+  `.dockerignore` excludes it and compose is configured with `env_file: .env`
+  (root). Run `docker compose` from the repo root so this file is found.
 - `.env*` is listed in both `.gitignore` and `.dockerignore`, so secrets never
   reach git or the image. The image is deployment-agnostic; only the host `.env`
   changes between environments.
