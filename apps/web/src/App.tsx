@@ -9,6 +9,7 @@ import Dashboard from './pages/admin/Dashboard';
 import Inventory from './pages/admin/Inventory';
 import InventoryNew from './pages/admin/InventoryNew';
 import InventoryReport from './pages/admin/InventoryReport';
+import InventoryDetail from './pages/admin/InventoryDetail';
 import Billing from './pages/admin/Billing';
 import Barcodes from './pages/admin/Barcodes';
 import Customers from './pages/admin/Customers';
@@ -19,11 +20,23 @@ import Reports from './pages/admin/Reports';
 import Settings from './pages/admin/Settings';
 import AuditLogs from './pages/admin/AuditLogs';
 import AdminBreadcrumbs from './components/AdminBreadcrumbs';
+import { Icon, ICONS } from './components/icons';
 import { api } from './lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 
 const qc = new QueryClient();
+
+type NavItem = { to: string; label: string; icon: string[]; end?: boolean };
+const NAV_OVERVIEW: NavItem = { to: '/admin', label: 'Overview', icon: ICONS.overview, end: true };
+const NAV_BARCODE: NavItem = { to: '/admin/barcodes', label: 'Barcode Generator', icon: ICONS.barcode };
+const NAV_CUSTOMERS: NavItem = { to: '/admin/customers', label: 'Customers & CRM', icon: ICONS.customers };
+const NAV_STAFF: NavItem = { to: '/admin/staff', label: 'Staff Management', icon: ICONS.staff };
+const NAV_RATES: NavItem = { to: '/admin/rates', label: 'Gold Rates', icon: ICONS.rates };
+const NAV_CAMPAIGNS: NavItem = { to: '/admin/campaigns', label: 'Offers & Campaigns', icon: ICONS.campaigns };
+const NAV_REPORTS: NavItem = { to: '/admin/reports', label: 'Reports', icon: ICONS.reports };
+const NAV_SETTINGS: NavItem = { to: '/admin/settings', label: 'Settings', icon: ICONS.settings };
+const NAV_AUDIT: NavItem = { to: '/admin/audit', label: 'Audit Logs', icon: ICONS.audit };
 
 function RatePill() {
   const { data } = useQuery({ queryKey: ['pub-rate'], queryFn: () => api.get('/public/rates'), refetchInterval: 60000 });
@@ -62,86 +75,85 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   if (loading) return <div className="main"><div className="skeleton" style={{ height: 120 }} /></div>;
   if (!user) return <Navigate to="/login" replace />;
   const isAdmin = user.role === 'admin';
-  const links = [
-    ['/admin', 'Overview'],
-    ['/admin/barcodes', 'Barcode Generator'], ['/admin/customers', 'Customers & CRM'],
-    ['/admin/staff', 'Staff Management'], ['/admin/rates', 'Gold Rates'],
-    ['/admin/campaigns', 'Offers & Campaigns'], ['/admin/reports', 'Reports'],
-    ['/admin/settings', 'Settings'], ['/admin/audit', 'Audit Logs'],
-  ];
   const close = () => setOpen(false);
-  const billingKids = [
-    ['/admin/billing/new', 'New Bill'],
-    ['/admin/billing/history', 'Billing History'],
+  const billingKids: NavItem[] = [
+    { to: '/admin/billing/new', label: 'New Bill', icon: ICONS.billing },
+    { to: '/admin/billing/history', label: 'Billing History', icon: ICONS.billingClock },
   ];
-  const invKids = [
-    ['/admin/inventory', 'Overview'], ['/admin/inventory/new', 'Add Product'], ['/admin/inventory/report', 'Purchase Report'],
+  const invKids: NavItem[] = [
+    { to: '/admin/inventory', label: 'Overview', icon: ICONS.overview, end: true },
+    { to: '/admin/inventory/new', label: 'Add Product', icon: ICONS.inventory },
+    { to: '/admin/inventory/report', label: 'Purchase Report', icon: ICONS.reports },
   ];
+  const navLink = (item: NavItem) => (
+    <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
+      <Icon paths={item.icon} />{item.label}
+    </NavLink>
+  );
+  const initials = user.display_name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'U';
   return (
     <div className="shell">
+      {open && <div className="sidebar-backdrop" onClick={close} aria-hidden="true" />}
       <aside className={`sidebar${open ? ' open' : ''}`}>
-        <div className="brand" style={{ color: '#fff', marginBottom: 12 }}>Shree <span style={{ color: 'var(--color-gold)' }}>Gold</span></div>
-        {isAdmin ? <>
-          <NavLink to="/admin" end className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>Overview</NavLink>
-          <button type="button" className={`nav-group${inBilling ? ' active' : ''}`} onClick={() => setBillingOpen((o) => !o)} aria-expanded={billingOpen}>
-            <span>Billing</span><span className={`chev${billingOpen ? ' open' : ''}`}>‹</span>
-          </button>
-          {billingOpen && (
-            <div className="nav-sub">
-              {billingKids.map(([to, label]) => (
-                <NavLink key={to} to={to} className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
-                  {label}
-                </NavLink>
-              ))}
-            </div>
-          )}
-          <button type="button" className={`nav-group${inInventory ? ' active' : ''}`} onClick={() => setInvOpen((o) => !o)} aria-expanded={invOpen}>
-            <span>Inventory</span><span className={`chev${invOpen ? ' open' : ''}`}>‹</span>
-          </button>
-          {invOpen && (
-            <div className="nav-sub">
-              {invKids.map(([to, label]) => (
-                <NavLink key={to} to={to} end={to === '/admin/inventory'} className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
-                  {label}
-                </NavLink>
-              ))}
-            </div>
-          )}
-          {links.slice(1).map(([to, label]) => (
-            <NavLink key={to} to={to} className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
-              {label}
-            </NavLink>
-          ))}
-        </> : <>
-          <button type="button" className={`nav-group${inBilling ? ' active' : ''}`} onClick={() => setBillingOpen((o) => !o)} aria-expanded={billingOpen}>
-            <span>Billing</span><span className={`chev${billingOpen ? ' open' : ''}`}>‹</span>
-          </button>
-          {billingOpen && (
-            <div className="nav-sub">
-              {billingKids.map(([to, label]) => (
-                <NavLink key={to} to={to} className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
-                  {label}
-                </NavLink>
-              ))}
-            </div>
-          )}
+        <div className="sidebar-brand">
+          <div className="brand-name">Shree <span>Gold</span></div>
+          <div className="brand-sub">Admin Console</div>
+        </div>
+        {isAdmin && navLink(NAV_OVERVIEW)}
+        <div className="sidebar-section">Operations</div>
+        <button type="button" className={`nav-group${inBilling ? ' active' : ''}`} onClick={() => setBillingOpen((o) => !o)} aria-expanded={billingOpen}>
+          <Icon paths={ICONS.billing} /><span>Billing</span><span className={`chev${billingOpen ? ' open' : ''}`}>‹</span>
+        </button>
+        {billingOpen && <div className="nav-sub">{billingKids.map(navLink)}</div>}
+        {isAdmin && (
+          <>
+            <button type="button" className={`nav-group${inInventory ? ' active' : ''}`} onClick={() => setInvOpen((o) => !o)} aria-expanded={invOpen}>
+              <Icon paths={ICONS.inventory} /><span>Inventory</span><span className={`chev${invOpen ? ' open' : ''}`}>‹</span>
+            </button>
+            {invOpen && <div className="nav-sub">{invKids.map(navLink)}</div>}
+            {navLink(NAV_BARCODE)}
+          </>
+        )}
+        <div className="sidebar-section">Manage</div>
+        {isAdmin ? (
+          <>
+            {navLink(NAV_CUSTOMERS)}
+            {navLink(NAV_STAFF)}
+            {navLink(NAV_RATES)}
+            {navLink(NAV_CAMPAIGNS)}
+            {navLink(NAV_REPORTS)}
+          </>
+        ) : (
           <NavLink to="/admin/customers" className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
-            Customer Search
+            <Icon paths={ICONS.search} />Customer Search
           </NavLink>
-        </>}
-        <Link to="/shop">← Public site</Link>
-        <div style={{ marginTop: 'auto', fontSize: 13, opacity: .8 }}>{user.display_name} • {user.role}<br /><button className="btn ghost" style={{ color: '#fff', borderColor: '#666', marginTop: 8 }} onClick={logout}>Logout</button></div>
+        )}
+        {isAdmin && (
+          <>
+            <div className="sidebar-section">System</div>
+            {navLink(NAV_SETTINGS)}
+            {navLink(NAV_AUDIT)}
+          </>
+        )}
+        <Link className="public-link" to="/shop">← Public site</Link>
+        <div className="sidebar-user">
+          <div className="avatar">{initials}</div>
+          <div className="who">
+            <div className="name">{user.display_name}</div>
+            <div className="role">{user.role}</div>
+          </div>
+          <button type="button" className="sidebar-logout" onClick={logout}>Logout</button>
+        </div>
       </aside>
       <div className="main">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <button className="btn ghost" style={{ padding: '6px 12px' }} onClick={() => setOpen(!open)}>☰ Menu</button>
-            <AdminBreadcrumbs />
+        <header className="admin-topbar">
+          <button type="button" className="btn ghost menu-toggle" aria-label="Toggle menu" onClick={() => setOpen(!open)}><Icon paths={ICONS.menu} size={16} /></button>
+          <AdminBreadcrumbs />
+          <div className="admin-topbar-right">
+            <span className="role-chip"><Icon paths={isAdmin ? ICONS.shield : ICONS.briefcase} size={13} />{isAdmin ? 'Admin' : 'Billing'}</span>
+            <div className="topbar-avatar" title={user.display_name}>{initials}</div>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>
-            {user.role === 'admin' ? '🛡️ Admin' : '💼 Billing'} • {user.display_name}
-          </div>
-        </div>
+        </header>
         {children}
       </div>
     </div>
@@ -173,6 +185,7 @@ export default function App() {
             <Route path="/admin/inventory" element={<AdminShell><RequireAdmin><Inventory /></RequireAdmin></AdminShell>} />
             <Route path="/admin/inventory/new" element={<AdminShell><RequireAdmin><InventoryNew /></RequireAdmin></AdminShell>} />
             <Route path="/admin/inventory/report" element={<AdminShell><RequireAdmin><InventoryReport /></RequireAdmin></AdminShell>} />
+            <Route path="/admin/inventory/:id" element={<AdminShell><RequireAdmin><InventoryDetail /></RequireAdmin></AdminShell>} />
             <Route path="/admin/barcodes" element={<AdminShell><RequireAdmin><Barcodes /></RequireAdmin></AdminShell>} />
             <Route path="/admin/customers" element={<AdminShell><Customers /></AdminShell>} />
             <Route path="/admin/staff" element={<AdminShell><RequireAdmin><Staff /></RequireAdmin></AdminShell>} />

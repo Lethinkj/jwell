@@ -9,6 +9,7 @@
     "dev": "node src/index.js",
     "start": "node src/index.js",
     "seed": "node src/seed.js",
+    "seed:demo": "node src/seed-demo.js",
     "migrate": "node src/migrate.js",
     "test": "node --env-file=.env --test test/*.test.js"
   },

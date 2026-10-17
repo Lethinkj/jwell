@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { Icon, ICONS } from './icons';
 
 interface Crumb {
   label: string;
@@ -72,7 +73,7 @@ export default function AdminBreadcrumbs() {
         border: '1px solid var(--color-border)',
       }}
     >
-      <span style={{ fontSize: 13, marginRight: 2 }}>🏠</span>
+      <Icon paths={ICONS.home} size={14} style={{ marginRight: 2 }} />
       {crumbs.map((crumb, idx) => {
         const isLast = idx === crumbs.length - 1;
         return (

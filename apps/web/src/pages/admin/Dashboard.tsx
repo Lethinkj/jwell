@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, inr } from '../../lib/api';
+import { Icon, ICONS } from '../../components/icons';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 const PRESETS = [['today', 'Today'], ['week', 'Week'], ['month', 'Month'], ['3m', '3 months'], ['6m', '6 months'], ['1y', '1 year']];
@@ -18,8 +19,22 @@ export default function Dashboard() {
         : isError ? <div className="err-box">Could not load reports. Is the API running on :4000?</div>
         : <>
           <div className="grid kpi">
-            {[['Revenue', inr(r.revenue)], ['Bills', r.bill_count], ['Avg bill', inr(r.avg_bill)], ['Items sold', r.items_sold], ['Gold sold', `${Number(r.gold_weight_g).toFixed(2)} g`], ['Gross profit est.', r.gross_profit_estimate == null ? 'restricted' : inr(r.gross_profit_estimate)]].map(([k, v]) => (
-              <div key={k} className="card"><small style={{ color: 'var(--color-muted)' }}>{k}</small><div style={{ fontSize: 22, fontWeight: 700 }}>{v}</div></div>))}
+            {([
+              { label: 'Revenue', value: inr(r.revenue), icon: ICONS.wallet, tint: '#C49A52' },
+              { label: 'Bills', value: r.bill_count, icon: ICONS.receipt, tint: '#8D5668' },
+              { label: 'Avg bill', value: inr(r.avg_bill), icon: ICONS.calculator, tint: '#26734D' },
+              { label: 'Items sold', value: r.items_sold, icon: ICONS.gem, tint: '#B08437' },
+              { label: 'Gold sold', value: `${Number(r.gold_weight_g).toFixed(2)} g`, icon: ICONS.scale, tint: '#5B6B8C' },
+              { label: 'Gross profit est.', value: r.gross_profit_estimate == null ? 'restricted' : inr(r.gross_profit_estimate), icon: ICONS.trending, tint: '#946200' },
+            ] as const).map((k) => (
+              <div key={k.label} className="card kpi-card" style={{ '--tint': k.tint, '--tint-border': `${k.tint}59` } as React.CSSProperties}>
+                <div className="kpi-head">
+                  <span className="kpi-ico" style={{ background: `${k.tint}14`, color: k.tint }}><Icon paths={k.icon} size={16} /></span>
+                  <small>{k.label}</small>
+                </div>
+                <div className="kpi-value">{k.value}</div>
+              </div>
+            ))}
           </div>
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', marginTop: 16 }}>
             <div className="card"><strong>Revenue trend</strong><div style={{ height: 220 }}><ResponsiveContainer><LineChart data={r.byDay}><XAxis dataKey="d" fontSize={11} /><YAxis fontSize={11} /><Tooltip /><Line dataKey="revenue" stroke="#8A6428" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div></div>
