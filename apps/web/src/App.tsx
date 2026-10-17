@@ -23,8 +23,7 @@ import AuditLogs from './pages/admin/AuditLogs';
 import AdminBreadcrumbs from './components/AdminBreadcrumbs';
 import CampaignReminderModal from './components/CampaignReminderModal';
 import { Icon, ICONS } from './components/icons';
-import { api } from './lib/api';
-import { useQuery } from '@tanstack/react-query';
+import PublicHeader from './components/landing/PublicHeader';
 import { useState, useEffect } from 'react';
 
 const qc = new QueryClient();
@@ -39,33 +38,6 @@ const NAV_REPORTS: NavItem = { to: '/admin/reports', label: 'Reports', icon: ICO
 const NAV_SETTINGS: NavItem = { to: '/admin/settings', label: 'Settings', icon: ICONS.settings };
 const NAV_EMAIL: NavItem = { to: '/admin/email', label: 'Email', icon: ICONS.mail };
 const NAV_AUDIT: NavItem = { to: '/admin/audit', label: 'Audit Logs', icon: ICONS.audit };
-
-function RatePill() {
-  const { data } = useQuery({ queryKey: ['pub-rate'], queryFn: () => api.get('/public/rates'), refetchInterval: 60000 });
-  const r = data?.data;
-  if (!r) return <span className="rate-pill">Rate —</span>;
-  const stale = data?.freshness?.status === 'stale';
-  return <span className={`rate-pill${stale ? ' stale' : ''}`} title={`Source: ${r.source} • Updated ${new Date(r.observed_at).toLocaleString()}`}>
-    Today 24K ₹{Number(r.rate_24k_per_g_inr).toLocaleString('en-IN')}/g{stale ? ' • stale' : ''}
-  </span>;
-}
-
-function PublicNav() {
-  const { user, logout } = useAuth();
-  return (
-    <header className="topbar">
-      <Link to="/" className="brand-link">
-        <img src="/logo.png" alt="Shree Gold Palace" className="brand-logo" />
-        <span className="brand">Shree <span>Gold Palace</span></span>
-      </Link>
-      <nav className="nav">
-        <NavLink to="/shop">Collections</NavLink>
-        <RatePill />
-        {user ? <><NavLink to="/admin">Dashboard</NavLink><button className="btn ghost" onClick={logout}>Logout</button></> : <NavLink to="/login">Staff Login</NavLink>}
-      </nav>
-    </header>
-  );
-}
 
 function AdminShell({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -196,10 +168,10 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<><PublicNav /><Landing /></>} />
-            <Route path="/shop" element={<><PublicNav /><Catalogue /></>} />
-            <Route path="/shop/:id" element={<><PublicNav /><ProductDetail /></>} />
-            <Route path="/login" element={<><PublicNav /><Login /></>} />
+            <Route path="/" element={<Landing />} />
+            <Route path="/shop" element={<><PublicHeader /><Catalogue /></>} />
+            <Route path="/shop/:id" element={<><PublicHeader /><ProductDetail /></>} />
+            <Route path="/login" element={<><PublicHeader /><Login /></>} />
             <Route path="/admin" element={<AdminShell><RequireAdmin><Dashboard /></RequireAdmin></AdminShell>} />
             <Route path="/admin/billing" element={<Navigate to="/admin/billing/new" replace />} />
             <Route path="/admin/billing/new" element={<AdminShell><Billing mode="new" /></AdminShell>} />
