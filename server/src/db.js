@@ -107,12 +107,27 @@ const migFile = (m) => fs.readFileSync(
 function initDb() {
   if (!_ready) {
     _ready = (async () => {
-      await pgPool.query(`CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
-      for (const m of MIGRATIONS) {
-        const done = await pgPool.query(`SELECT 1 FROM schema_migrations WHERE name = $1`, [m]);
-        if (done.rows.length) continue;
-        await pgPool.query(migFile(m));
-        await pgPool.query(`INSERT INTO schema_migrations (name) VALUES ($1)`, [m]);
+      const client = await pgPool.connect();
+      try {
+        await client.query('BEGIN');
+        // Serialize migrations across processes (e.g. parallel test files or
+        // several app replicas booting at once). Concurrent `CREATE TABLE IF
+        // NOT EXISTS` otherwise races and fails with a duplicate pg_type error.
+        await client.query('SELECT pg_advisory_xact_lock($1)', [727001]);
+        await client.query(`CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
+        for (const m of MIGRATIONS) {
+          const done = await client.query(`SELECT 1 FROM schema_migrations WHERE name = $1`, [m]);
+          if (done.rows.length) continue;
+          await client.query(migFile(m));
+          await client.query(`INSERT INTO schema_migrations (name) VALUES ($1)`, [m]);
+        }
+        await client.query('COMMIT');
+      } catch (e) {
+        try { await client.query('ROLLBACK'); } catch { /* ignore */ }
+        _ready = null; // allow a retry on the next require/boot
+        throw e;
+      } finally {
+        client.release();
       }
       console.log('[db] Supabase Postgres schema ready');
     })();

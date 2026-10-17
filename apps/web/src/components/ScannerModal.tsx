@@ -15,6 +15,7 @@ type Props = {
  *  released on close/unmount. Never uploads or stores frames. */
 export default function ScannerModal({ onDetect, onClose, dedupeMs = 2500, title = 'Scan barcode', onManualEntry }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const lastRef = useRef<{ value: string; at: number }>({ value: '', at: 0 });
   const onDetectRef = useRef(onDetect);
   onDetectRef.current = onDetect;
@@ -22,6 +23,28 @@ export default function ScannerModal({ onDetect, onClose, dedupeMs = 2500, title
   const [status, setStatus] = useState('Starting camera…');
   const [devices, setDevices] = useState<{ deviceId: string; label: string }[]>([]);
   const [deviceId, setDeviceId] = useState<string | undefined>(undefined);
+  const [imageBusy, setImageBusy] = useState(false);
+
+  // Fallback for when there is no camera (or to verify a downloaded label):
+  // decode a barcode straight from a picked photo.
+  const scanImage = async (file: File) => {
+    setError('');
+    setImageBusy(true);
+    setStatus('Reading barcode from image…');
+    const url = URL.createObjectURL(file);
+    try {
+      const reader = new BrowserMultiFormatReader();
+      const result = await reader.decodeFromImageUrl(url);
+      const value = result.getText().trim();
+      setStatus(`Detected: ${value}`);
+      if (value) onDetectRef.current(value);
+    } catch {
+      setStatus('No barcode found in that image. Try a sharper, closer photo.');
+    } finally {
+      URL.revokeObjectURL(url);
+      setImageBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!window.isSecureContext) {
@@ -84,8 +107,25 @@ export default function ScannerModal({ onDetect, onClose, dedupeMs = 2500, title
             )}
           </>
         )}
+        <div style={{ marginTop: 14 }}>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) scanImage(f); e.target.value = ''; }}
+          />
+          <button
+            className="btn"
+            onClick={() => fileRef.current?.click()}
+            disabled={imageBusy}
+            style={{ width: '100%', marginBottom: onManualEntry ? 8 : 0 }}
+          >
+            🖼 {imageBusy ? 'Reading image…' : 'Scan from image (or downloaded PNG)'}
+          </button>
+        </div>
         {onManualEntry && (
-          <div style={{ marginTop: 14 }}>
+          <div style={{ marginTop: 8 }}>
             <button
               className="btn gold"
               onClick={() => {

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { api } from '../../lib/api';
 import BarcodeLabel, { LabelData } from '../../components/BarcodeLabel';
 import ScannerModal from '../../components/ScannerModal';
+import { barcodeFilename, downloadBarcode } from '../../lib/barcode';
 
 // Admin-only Barcode Generator: A) new product + barcode, B) labels for existing, + scanner test.
 export default function Barcodes() {
@@ -62,6 +63,18 @@ export default function Barcodes() {
     } catch (e: any) { setMsg(e.message + (String(e.message).includes('confirm') ? ' — tick confirm to proceed.' : '')); }
   };
 
+  // Download every queued barcode once (unique values), staggered so the
+  // browser does not drop rapid programmatic downloads.
+  const downloadAll = () => {
+    const seen = new Set<string>();
+    let i = 0;
+    for (const l of labels) {
+      if (seen.has(l.data.barcode_value)) continue;
+      seen.add(l.data.barcode_value);
+      setTimeout(() => downloadBarcode(l.data.barcode_value, barcodeFilename(l.data.sku)), i++ * 250);
+    }
+  };
+
   const verifyScan = async (value: string) => {
     try {
       const r = await api.get(`/products/barcode/${encodeURIComponent(value)}`);
@@ -78,6 +91,7 @@ export default function Barcodes() {
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           <button className="btn ghost" onClick={() => setTesting(true)}>⛶ Test scanner</button>
           <button className="btn ghost" onClick={() => window.print()} disabled={!labels.length}>🖨 Print all labels</button>
+          <button className="btn ghost" onClick={downloadAll} disabled={!labels.length}>⬇ Download all (PNG)</button>
           <button className="btn ghost" onClick={() => setLabels([])} disabled={!labels.length}>Clear queue</button>
         </div>
         <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))' }}>

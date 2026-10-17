@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { before } = require('node:test');
+const { before, after } = require('node:test');
 const bcrypt = require('bcryptjs');
 
 // Postgres-only tests: require DATABASE_URL (or SUPABASE_DB_URL).
@@ -19,6 +19,11 @@ let billTok = '';
 let shopId = '';
 let prodId = '';
 let custId = '';
+// Unique per run so the suite can be re-run against the same database without
+// fixture collisions (emails are globally unique in `profiles`).
+const runId = Date.now().toString(36);
+const adminEmail = `admin_${runId}@test.local`;
+const billEmail = `bill_${runId}@test.local`;
 
 async function api(method, path, token, body) {
   const r = await fetch(base + path, {
@@ -41,8 +46,8 @@ before(async () => {
       VALUES (?,?,?,?,?,?,1,?)`, id, shopId, role, email, email, bcrypt.hashSync(pass, 10), primary ? 1 : 0);
     return id;
   };
-  await mk('admin@test.local', 'admin', 'Admin@1234', true);
-  await mk('bill@test.local', 'billing', 'Bill@1234', false);
+  await mk(adminEmail, 'admin', 'Admin@1234', true);
+  await mk(billEmail, 'billing', 'Bill@1234', false);
   await run(`INSERT INTO gold_rates (id, source, purity_basis, rate_per_g_inr, rate_24k_per_g_inr, observed_at, approved)
     VALUES (?,?,?,?,?,?,1)`, uid('rate'), 'test', '24K', 9000, 9000, new Date().toISOString());
   const cat = uid('cat');
@@ -60,10 +65,10 @@ before(async () => {
   base = `http://localhost:${srv.address().port}/api`;
   test.after = test.after || (() => {});
   globalThis.__srv = srv;
-  const a = await api('POST', '/auth/login', null, { email: 'admin@test.local', password: 'Admin@1234' });
+  const a = await api('POST', '/auth/login', null, { email: adminEmail, password: 'Admin@1234' });
   assert.equal(a.status, 200);
   adminTok = a.body.token;
-  const b = await api('POST', '/auth/login', null, { email: 'bill@test.local', password: 'Bill@1234' });
+  const b = await api('POST', '/auth/login', null, { email: billEmail, password: 'Bill@1234' });
   assert.equal(b.status, 200);
   billTok = b.body.token;
 });
@@ -93,10 +98,10 @@ test('roles: billing blocked from admin endpoints, admin allowed', async () => {
 });
 
 test('single primary admin: create forces billing role; primary cannot be deactivated', async () => {
-  const c = await api('POST', '/admin/staff', adminTok, { name: 'Sneaky', email: 'sneaky@t.t', password: 'Password12', role: 'admin' });
+  const c = await api('POST', '/admin/staff', adminTok, { name: 'Sneaky', email: `sneaky_${runId}@t.t`, password: 'Password12', role: 'admin' });
   assert.equal(c.status, 201);
   assert.equal(c.body.data.role, 'billing');
-  const adminRow = await get(`SELECT user_id FROM profiles WHERE role='admin' AND active=1`);
+  const adminRow = await get(`SELECT user_id FROM profiles WHERE role='admin' AND active=1 AND shop_id=?`, shopId);
   const no = await api('PATCH', `/admin/staff/${adminRow.user_id}`, adminTok, { active: false });
   assert.equal(no.status, 409);
   const self = await api('PATCH', `/admin/staff/${c.body.data.user_id}`, adminTok, { active: false });
@@ -104,19 +109,20 @@ test('single primary admin: create forces billing role; primary cannot be deacti
 });
 
 test('deactivation revokes sessions immediately; reset password works once', async () => {
-  const c = await api('POST', '/admin/staff', adminTok, { name: 'Temp', email: 'temp@t.t', password: 'Password12' });
-  const t0 = await api('POST', '/auth/login', null, { email: 'temp@t.t', password: 'Password12' });
+  const tempEmail = `temp_${runId}@t.t`;
+  const c = await api('POST', '/admin/staff', adminTok, { name: 'Temp', email: tempEmail, password: 'Password12' });
+  const t0 = await api('POST', '/auth/login', null, { email: tempEmail, password: 'Password12' });
   assert.equal(t0.status, 200);
   await api('PATCH', `/admin/staff/${c.body.data.user_id}`, adminTok, { active: false });
   const me = await fetch(base + '/auth/me', { headers: { Authorization: `Bearer ${t0.body.token}` } });
   assert.equal(me.status, 401);
-  const login = await api('POST', '/auth/login', null, { email: 'temp@t.t', password: 'Password12' });
+  const login = await api('POST', '/auth/login', null, { email: tempEmail, password: 'Password12' });
   assert.equal(login.status, 401);
   await api('PATCH', `/admin/staff/${c.body.data.user_id}`, adminTok, { active: true });
   const rp = await api('POST', `/admin/staff/${c.body.data.user_id}/reset-password`, adminTok, {});
   assert.equal(rp.status, 200);
   assert.ok(rp.body.data.temporaryPassword && rp.body.data.temporaryPassword.length >= 8);
-  const t1 = await api('POST', '/auth/login', null, { email: 'temp@t.t', password: rp.body.data.temporaryPassword });
+  const t1 = await api('POST', '/auth/login', null, { email: tempEmail, password: rp.body.data.temporaryPassword });
   assert.equal(t1.status, 200);
 });
 
@@ -133,7 +139,7 @@ test('phone-first lookup: normalized variants match; duplicates flagged not merg
 
 test('barcode assign: duplicates rejected without confirm; reassign audited', async () => {
   const p2 = uid('prd');
-  const cat = (await get(`SELECT id FROM categories LIMIT 1`)).id;
+  const cat = (await get(`SELECT id FROM categories WHERE shop_id=? LIMIT 1`, shopId)).id;
   await run(`INSERT INTO products (id, shop_id, category_id, sku, name, purity, gross_weight_g, net_gold_weight_g, acquisition_cost_inr, status)
     VALUES (?,?,?,?,?,?,?,?,?,?)`, p2, shopId, cat, 'TST-2', 'Ring 2', '22K', 5, 4.8, 40000, 'available');
   const taken = await api('POST', `/products/${p2}/barcode`, adminTok, { barcode_value: 'TST-1' });
@@ -180,3 +186,35 @@ test('billing flow: draft → finalize atomic; history snapshots; admin-only voi
 });
 
 test('close server', async () => { globalThis.__srv.close(); });
+
+// Best-effort cleanup so repeated runs stay idempotent even against a shared DB.
+// Each statement is isolated: a failure never blocks the others or the suite.
+after(async () => {
+  if (!shopId) return;
+  const cleanup = [
+    `DELETE FROM payments WHERE sale_id IN (SELECT id FROM sales WHERE shop_id = ?)`,
+    `DELETE FROM returns_refunds WHERE sale_id IN (SELECT id FROM sales WHERE shop_id = ?)`,
+    `DELETE FROM sale_items WHERE sale_id IN (SELECT id FROM sales WHERE shop_id = ?)`,
+    `DELETE FROM sales WHERE shop_id = ?`,
+    `DELETE FROM product_barcodes WHERE shop_id = ?`,
+    `DELETE FROM stock_movements WHERE product_id IN (SELECT id FROM products WHERE shop_id = ?)`,
+    `DELETE FROM products WHERE shop_id = ?`,
+    `DELETE FROM campaign_recipients WHERE customer_id IN (SELECT id FROM customers WHERE shop_id = ?)`,
+    `DELETE FROM customer_addresses WHERE customer_id IN (SELECT id FROM customers WHERE shop_id = ?)`,
+    `DELETE FROM customer_occasions WHERE customer_id IN (SELECT id FROM customers WHERE shop_id = ?)`,
+    `DELETE FROM consent_events WHERE customer_id IN (SELECT id FROM customers WHERE shop_id = ?)`,
+    `DELETE FROM customers WHERE shop_id = ?`,
+    `DELETE FROM campaigns WHERE shop_id = ?`,
+    `DELETE FROM offers WHERE shop_id = ?`,
+    `DELETE FROM expenses WHERE shop_id = ?`,
+    `DELETE FROM audit_logs WHERE actor_id IN (SELECT user_id FROM profiles WHERE shop_id = ?)`,
+    `DELETE FROM categories WHERE shop_id = ?`,
+    `DELETE FROM shop_settings WHERE shop_id = ?`,
+    `DELETE FROM profiles WHERE shop_id = ?`,
+    `DELETE FROM branches WHERE shop_id = ?`,
+    `DELETE FROM shops WHERE id = ?`,
+  ];
+  for (const sql of cleanup) {
+    try { await run(sql, shopId); } catch { /* best effort */ }
+  }
+});
