@@ -4,7 +4,7 @@
 #   Internet -> Apache / Webuzo (demo.marvelslice.com, TLS on 80/443)
 #             -> 127.0.0.1:8083
 #                -> goldshop-web (nginx: SPA + /api proxy)
-#                   -> goldshop-api :4000 -> Supabase Postgres
+#                   -> goldshop-api :4000 -> Supabase Cloud (managed Postgres)
 #
 # Service names are prefixed (goldshop-*) so this stack can also join a shared
 # network (e.g. lms-network) without clashing with web/api/postgres/redis there.
@@ -27,11 +27,9 @@ services:
       PORT: "4000"
     expose:
       - "4000"
-    # Self-hosted Supabase on this VPS publishes Postgres on the HOST loopback
-    # (e.g. 127.0.0.1:54329). From inside a container, 127.0.0.1 is the container
-    # itself, so point DATABASE_URL at host.docker.internal instead.
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    # DATABASE_URL points at Supabase Cloud (managed Postgres) over the public
+    # internet, so the container just dials out on 5432 — no host gateway mapping
+    # and no shared Docker network are needed.
     restart: unless-stopped
     networks:
       - app

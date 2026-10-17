@@ -7,7 +7,7 @@ ports 80/443 and TLS; it reverse-proxies to the web container.
 Internet ─▶ Apache / Webuzo (demo.marvelslice.com, TLS 80/443)
               └─▶ 127.0.0.1:8083
                      └─▶ goldshop-web (nginx: SPA + proxy /api)
-                            └─▶ goldshop-api :4000 ─▶ Supabase Postgres
+                            └─▶ goldshop-api :4000 ─▶ Supabase Cloud (Postgres)
 ```
 
 The app is stateless — the only durable store is Postgres — so containers are
@@ -26,11 +26,10 @@ disposable and `docker compose up -d --build` is a full deploy.
 
 ## Ports
 
-Your host already uses 80/443 (Apache), 8080/8081/8082 (docker `lms-nginx`,
-landing/LMS/pgAdmin), 8000/8443 (Supabase Kong), 9000 (Portainer),
-54329/65439 (Supabase Postgres/pooler).
-
-This stack therefore binds **127.0.0.1:8083** (first free). Override if needed:
+On your host, 80/443 (Apache), 8080/8081/8082 (`lms-nginx`), 8000/8443 (the other
+stack's Supabase Kong) and 9000 (Portainer) are already taken by your other
+projects. This stack binds **127.0.0.1:8083** (first free) and doesn't touch them.
+Override if needed:
 
 ```bash
 WEB_PORT=8090 docker compose up -d
@@ -56,19 +55,17 @@ docker ps --format 'table {{.Names}}\t{{.Ports}}'
    $EDITOR .env
    ```
 
-   **`DATABASE_URL`** — you run Supabase **self-hosted** on this VPS. The robust
-   link is to put the API container on Supabase's Docker network and address
-   Postgres by its **service name** on the internal port (5432), not the
-   host-published 54329:
+   **`DATABASE_URL`** — use your **Supabase Cloud** project's direct connection
+   string (Project Settings → Database → Connection string → URI):
 
    ```env
-   DATABASE_URL=postgresql://postgres:<pw>@db:5432/goldshop
+   DATABASE_URL=postgresql://postgres:<db-password>@db.<project-ref>.supabase.co:5432/postgres
    ```
 
-   See "Connecting to your self-hosted Supabase" below for the network override.
-   Create a **dedicated database** (e.g. `goldshop`) — the migrations create plain
-   tables in `public` and would collide with the landing project if you shared its
-   database. Set a **new** `JWT_SECRET` (32+ random chars).
+   No local network wiring is needed — the container dials out to Supabase over the
+   internet. Use the **direct** connection (port 5432), not the pooler, for
+   `migrate`/`seed`. Also set a **new** `JWT_SECRET` (32+ random chars) and the
+   `SMTP_*` values.
 4. Apply schema + demo data once (the API also runs migrations on boot):
 
    ```bash
@@ -76,58 +73,27 @@ docker ps --format 'table {{.Names}}\t{{.Ports}}'
    docker compose run --rm goldshop-api node server/src/seed.js
    ```
 
-## Connecting to your self-hosted Supabase
+## Environment & secrets (why there's no `.env.production`)
 
-The API needs TCP access to Postgres. Your `ss` output shows it published on
-**`127.0.0.1:54329`** — loopback only. A container cannot reach a loopback bind
-through `host.docker.internal` (that resolves to the docker *gateway* IP, not
-`127.0.0.1`). So prefer option A.
+Configuration is injected at **runtime**, not baked into images or committed as a
+file. That's why there is deliberately no `.env.production`:
 
-### A. Join Supabase's Docker network (recommended)
+| Layer | File | Committed? | Used by |
+| --- | --- | --- | --- |
+| Template | `.env.example` | yes | reference only |
+| Production | `.env` (repo root, next to compose) | **no** (gitignored) | compose `env_file` → both containers' `process.env` |
+| Local dev | `server/.env` | no | `npm run dev` only |
+| Frontend build | `apps/web/.env*` | n/a | build-time `VITE_*` only — we set none |
 
-Put the API on the same network as Supabase's Postgres and address it by service
-name. Create `docker-compose.override.yml` next to `docker-compose.yml`:
-
-```yaml
-services:
-  goldshop-api:
-    networks:
-      - app
-      - supabase
-networks:
-  supabase:
-    external: true
-    name: SUPABASE_NETWORK   # <- from the commands below
-```
-
-Find the network name and the Postgres service/container name:
-
-```bash
-docker network ls
-docker ps --format '{{.Names}}\t{{.Networks}}' | grep -i -E 'supabase|postgres'
-docker inspect <supabase-db-container> \
-  --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
-```
-
-Then set, using the **service name** shown in that network:
-
-```env
-DATABASE_URL=postgresql://postgres:<pw>@db:5432/goldshop
-```
-
-(Create the `goldshop` database first — e.g. `docker exec -it <db> psql -U postgres -c 'CREATE DATABASE goldshop;'`.)
-
-### B. Reach it via the host gateway
-
-Only works if the port is bound to a **non-loopback** address. With Postgres on
-`127.0.0.1:54329` this fails with `ECONNREFUSED` — use A. If you later rebind it
-to `0.0.0.0`/the docker bridge, then:
-
-```env
-DATABASE_URL=postgresql://postgres:<pw>@host.docker.internal:54329/goldshop
-```
-
-(`extra_hosts: host.docker.internal:host-gateway` is already set on `goldshop-api`.)
+- `docker compose` reads `.env` and sets those variables in each container's
+  environment. The API reads `process.env` (its `dotenv` call never overrides real
+  env vars), so the server's `.env` **is** the production config.
+- `.env*` is listed in both `.gitignore` and `.dockerignore`, so secrets never
+  reach git or the image. The image is deployment-agnostic; only the host `.env`
+  changes between environments.
+- A front-end `.env.production` would only matter for **build-time** `VITE_*`
+  values. We leave `VITE_API_URL` unset so the SPA uses the relative `/api` and
+  rides the proxy.
 
 ## Deploy / update
 
@@ -148,8 +114,8 @@ docker compose logs -f goldshop-api
 
 - Backups are a Postgres concern (no local DB volume): use Supabase backups or
   `pg_dump` against `DATABASE_URL`.
-- Self-hosted Supabase doesn't pause (that's a Cloud free-tier thing), but it's
-  now a hard dependency: keep its containers up and its Postgres backups healthy.
+- Supabase Cloud free tier **pauses after ~1 week idle** — unpause from the
+  dashboard, or keep the project warm for a live demo.
 - Always recreate **both** containers together. The in-container nginx resolves
   `goldshop-api` once at startup; recreating `goldshop-api` alone leaves
   `goldshop-web` pointing at a stale IP (502).
@@ -159,12 +125,10 @@ docker compose logs -f goldshop-api
 
 - **`goldshop-api` exits at boot with "Missing DATABASE_URL"** — `.env` isn't
   next to `docker-compose.yml`, or `env_file` couldn't read it.
-- **SSL / "server does not support SSL" errors connecting to Postgres** — the
-  API's pool hardcodes `ssl: { rejectUnauthorized: false }`
-  (`server/src/db.js:41`). Supabase Cloud always wants SSL so this is correct
-  there; a self-hosted Postgres that has SSL disabled on 54329 will reject it.
-  Either enable SSL on the Supabase Postgres, or make the `ssl` option
-  conditional on the host.
+- **SSL errors connecting to Postgres** — the pool hardcodes
+  `ssl: { rejectUnauthorized: false }` (`server/src/db.js:41`), which is correct
+  for Supabase Cloud (SSL is required). If you ever point `DATABASE_URL` at a
+  local Postgres with SSL off, make that option conditional.
 - **`/api` returns 502** — `goldshop-web` is pointing at a stale `goldshop-api`
   IP. Recreate both: `docker compose up -d --build`.
 - **Apex/subdomain 404 from Apache** — the `ProxyPass` lines aren't in the right
