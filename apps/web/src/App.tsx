@@ -52,7 +52,10 @@ function PublicNav() {
   const { user, logout } = useAuth();
   return (
     <header className="topbar">
-      <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}><span className="brand">Shree <span>Gold Palace</span></span></Link>
+      <Link to="/" className="brand-link">
+        <img src="/logo.png" alt="Shree Gold Palace" className="brand-logo" />
+        <span className="brand">Shree <span>Gold Palace</span></span>
+      </Link>
       <nav className="nav">
         <NavLink to="/shop">Collections</NavLink>
         <RatePill />
@@ -96,8 +99,11 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       {open && <div className="sidebar-backdrop" onClick={close} aria-hidden="true" />}
       <aside className={`sidebar${open ? ' open' : ''}`}>
         <div className="sidebar-brand">
-          <div className="brand-name">Shree <span>Gold</span></div>
-          <div className="brand-sub">Admin Console</div>
+          <img src="/logo.png" alt="" className="sidebar-logo" />
+          <div>
+            <div className="brand-name">Shree <span>Gold</span></div>
+            <div className="brand-sub">Admin Console</div>
+          </div>
         </div>
         {isAdmin && navLink(NAV_OVERVIEW)}
         <div className="sidebar-section">Operations</div>
