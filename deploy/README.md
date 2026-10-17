@@ -69,6 +69,10 @@ docker ps --format 'table {{.Names}}\t{{.Ports}}'
    **Session** mode (port **5432**), not the transaction pooler on 6543 — the API
    keeps a connection pool and runs migrations. Also set a **new** `JWT_SECRET`
    (32+ random chars) and the `SMTP_*` values.
+   **Using an existing Supabase project?** The migrations create generic tables in
+   the `public` schema (`shops`, `products`, `categories`, `profiles`, …). If
+   another app in that project already uses those names, you'll get collisions —
+   use a separate Supabase project (or a dedicated schema) instead.
 4. Apply schema + demo data once (the API also runs migrations on boot):
 
    ```bash
@@ -135,8 +139,11 @@ docker compose logs -f goldshop-api
 - **`DB init failed: connect ENETUNREACH <ipv6-address>:5432`** — you're using the
   IPv6-only direct Supabase host on a VPS without IPv6. Switch `DATABASE_URL` to
   the **Session pooler** (IPv4) string; see "One-time server setup".
-- **`Tenant or user not found`** — using the pooler with username `postgres`
-  instead of `postgres.<project-ref>`.
+- **`(ENOIDENTIFIER) no tenant identifier provided`** or **`Tenant or user not
+  found`** — the pooler can't identify your project. The username must be
+  `postgres.<project-ref>` (the ref is your project's subdomain/ID), **not**
+  `postgres`. Verify with:
+  `docker compose run --rm goldshop-api node -e "const u=new URL(process.env.DATABASE_URL);console.log(u.username,u.host,u.pathname)"`
 - **SSL errors connecting to Postgres** — the pool hardcodes
   `ssl: { rejectUnauthorized: false }` (`server/src/db.js:41`), which is correct
   for Supabase Cloud (SSL is required). If you ever point `DATABASE_URL` at a
