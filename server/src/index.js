@@ -56,6 +56,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true, db: 'supabase-postgres
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin', require('./routes/email'));
+app.use('/api/admin', require('./routes/occasions'));
 app.use('/api', require('./routes/catalog'));
 app.use('/api', require('./routes/ops'));
 app.use('/api', require('./routes/sales'));
@@ -72,6 +73,8 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 4000;
 if (require.main === module) {
   app.ready.then(() => {
+    // Daily birthday/anniversary/festival greetings (opt-in per shop).
+    require('./services/occasions').startOccasionScheduler();
     const srv = app.listen(PORT, () => console.log(`[server] Gold Shop API on http://localhost:${PORT} (db: Supabase Postgres)`));
     srv.on('error', (e) => {
       if (e && e.code === 'EADDRINUSE') {

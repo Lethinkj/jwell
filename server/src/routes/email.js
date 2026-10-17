@@ -1,7 +1,7 @@
 const express = require('express');
 const { all } = require('../db');
 const { auth, requireRoles, audit } = require('../middleware/auth');
-const { DEFAULT_TEMPLATES, PLACEHOLDERS, TEMPLATE_KEYS, getTemplates, saveTemplate } = require('../services/emailTemplates');
+const { CATEGORIES, DEFAULT_TEMPLATES, PLACEHOLDERS, TEMPLATE_KEYS, getTemplates, saveTemplate } = require('../services/emailTemplates');
 const mailer = require('../services/mailer');
 const { sendTemplate, sendOffers, shopVars } = require('../services/email');
 
@@ -24,6 +24,7 @@ router.get('/email/settings', async (req, res) => {
     templates: await getTemplates(req.user.shop_id),
     defaults: DEFAULT_TEMPLATES,
     keys: TEMPLATE_KEYS,
+    categories: CATEGORIES,
     placeholders: PLACEHOLDERS,
     shop: await shopVars(req.user.shop_id),
   } });
@@ -36,10 +37,10 @@ router.get('/email/status', async (req, res) => {
 router.put('/email/templates/:key', async (req, res) => {
   const key = req.params.key;
   if (!TEMPLATE_KEYS.includes(key)) return res.status(400).json({ error: 'bad_request', message: `unknown template: ${key}` });
-  const { subject, body, enabled } = req.body || {};
+  const { subject, body, enabled, body_format } = req.body || {};
   if (subject !== undefined && !String(subject).trim()) return res.status(400).json({ error: 'bad_request', message: 'subject cannot be empty' });
   if (body !== undefined && !String(body).trim()) return res.status(400).json({ error: 'bad_request', message: 'body cannot be empty' });
-  const saved = await saveTemplate(req.user.shop_id, key, { subject, body, enabled });
+  const saved = await saveTemplate(req.user.shop_id, key, { subject, body, enabled, body_format });
   audit(req.user.user_id, 'email.template_update', 'shop', req.user.shop_id, `template ${key} updated`);
   res.json({ data: { key, template: saved } });
 });
@@ -63,9 +64,9 @@ router.post('/email/test', async (req, res) => {
 
 // ---- Send the offers email to consented customers ----
 router.post('/email/offers/send', async (req, res) => {
-  const { subject, body, offer_details } = req.body || {};
+  const { subject, body, body_format, offer_details } = req.body || {};
   if (!mailer.isConfigured()) return res.status(400).json({ error: 'smtp_not_configured', message: 'SMTP is not configured. Set SMTP_USER/SMTP_PASSWORD on the server.' });
-  const result = await sendOffers(req.user.shop_id, { subject, body, offerDetails: offer_details });
+  const result = await sendOffers(req.user.shop_id, { subject, body, body_format, offerDetails: offer_details });
   audit(req.user.user_id, 'email.offers_send', 'shop', req.user.shop_id, `offers email → ${result.recipients} recipients (sent ${result.sent}, failed ${result.failed}, skipped ${result.skipped})`);
   res.json({ data: result });
 });

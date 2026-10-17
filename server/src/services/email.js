@@ -19,7 +19,12 @@ async function logMessage(shopId, { to, customer_id, template_key, subject, stat
 /** Shop-level variables available to every template. */
 async function shopVars(shopId) {
   const s = await getSettings(shopId);
-  return { shop_name: s.shop_name, shop_phone: s.shop_phone, shop_address: s.shop_address };
+  return {
+    shop_name: s.shop_name,
+    shop_phone: s.shop_phone,
+    shop_address: s.shop_address,
+    date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
+  };
 }
 
 /**
@@ -36,7 +41,11 @@ async function sendTemplate(shopId, key, { to, customer_id, vars = {}, override,
     await logMessage(shopId, { to, customer_id, template_key: logKey || key, status: 'skipped', error: 'template_disabled' });
     return { ok: false, error: 'template_disabled' };
   }
-  const merged = { subject: override?.subject ?? tpl.subject, body: override?.body ?? tpl.body };
+  const merged = {
+    subject: override?.subject ?? tpl.subject,
+    body: override?.body ?? tpl.body,
+    body_format: override?.body_format ?? tpl.body_format,
+  };
   const fullVars = { ...(await shopVars(shopId)), ...vars };
   const rendered = renderTemplate(merged, fullVars);
   const result = await mailer.sendMail({ to, subject: rendered.subject, text: rendered.text, html: rendered.html });
@@ -65,7 +74,7 @@ async function sendPurchaseThankYou(shopId, sale, customer) {
 }
 
 /** Send the offers/announcement email to every consented customer with an email. */
-async function sendOffers(shopId, { subject, body, offerDetails } = {}) {
+async function sendOffers(shopId, { subject, body, body_format, offerDetails } = {}) {
   const recipients = await all(
     `SELECT id, name, email FROM customers
      WHERE shop_id = ? AND marketing_consent = 1 AND email IS NOT NULL AND email <> ''`,
@@ -75,7 +84,7 @@ async function sendOffers(shopId, { subject, body, offerDetails } = {}) {
     const r = await sendTemplate(shopId, 'offers', {
       to: c.email,
       customer_id: c.id,
-      override: (subject || body) ? { subject, body } : undefined,
+      override: (subject || body) ? { subject, body, body_format } : undefined,
       vars: { customer_name: c.name || 'Customer', offer_details: offerDetails || '' },
     });
     if (r.ok) sent++;

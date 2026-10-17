@@ -193,6 +193,8 @@ test('close server', async () => { globalThis.__srv.close(); });
 after(async () => {
   if (!shopId) return;
   const cleanup = [
+    `DELETE FROM occasion_sends WHERE shop_id = ?`,
+    `DELETE FROM festivals WHERE shop_id = ?`,
     `DELETE FROM email_messages WHERE shop_id = ?`,
     `DELETE FROM email_templates WHERE shop_id = ?`,
     `DELETE FROM payments WHERE sale_id IN (SELECT id FROM sales WHERE shop_id = ?)`,

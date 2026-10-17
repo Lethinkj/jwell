@@ -85,6 +85,8 @@ const SETTING_DEFAULTS = {
   label_height_mm: '30',
   label_margin_mm: '2',
   label_show_price: 'yes',
+  occasion_autosend: 'no',
+  occasion_window_days: '10',
 };
 
 async function getSettings(shopId) {
@@ -105,6 +107,9 @@ router.put('/settings', async (req, res) => {
   if (!updates.length) return res.status(400).json({ error: 'bad_request', message: 'no known settings provided' });
   if (body.label_show_price !== undefined && !['yes', 'no'].includes(String(body.label_show_price))) {
     return res.status(400).json({ error: 'bad_request', message: 'label_show_price must be yes/no' });
+  }
+  if (body.occasion_autosend !== undefined && !['yes', 'no'].includes(String(body.occasion_autosend))) {
+    return res.status(400).json({ error: 'bad_request', message: 'occasion_autosend must be yes/no' });
   }
   for (const k of updates) {
     const exists = await get('SELECT 1 FROM shop_settings WHERE shop_id = ? AND key = ?', req.user.shop_id, k);
