@@ -55,12 +55,12 @@ button { font-family: inherit; }
 .btn.ghost { background: transparent; color: var(--color-espresso); border: 1px solid var(--color-border); }
 .btn.ghost:hover { background: rgba(214,180,92,.14); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
-.card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(71,16,29,.06); }
+.card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 12px; padding: 18px; box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06); }
 .grid { display: grid; gap: 16px; }
 .grid.kpi { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .kpi-card { position: relative; display: flex; flex-direction: column; gap: 10px; overflow: hidden; transition: transform var(--motion-fast), box-shadow var(--motion-fast); }
 .kpi-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 3px; border-radius: 12px 0 0 12px; background: var(--tint, var(--color-gold)); }
-.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(71,16,29,.12); }
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(16,24,40,.10); }
 .kpi-head { display: flex; align-items: center; gap: 10px; }
 .kpi-ico { width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; border: 1px solid var(--tint-border, var(--color-border)); }
 .kpi-head small { color: var(--color-muted); font-weight: 600; letter-spacing: .3px; }
@@ -69,7 +69,7 @@ button { font-family: inherit; }
 table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 .tbl th, .tbl td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--color-border); }
 .tbl th { color: var(--color-muted); font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: .4px; }
-.tbl tr:hover td { background: #FFFFFF; }
+.tbl tr:hover td { background: #F7F8FA; }
 input, select, textarea { border: 1px solid var(--color-border); border-radius: 8px; padding: 10px 12px; font: inherit; width: 100%; background: #fff; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--color-gold); outline-offset: 1px; }
 label.lbl { font-size: 13px; font-weight: 600; color: var(--color-muted); display: block; margin: 10px 0 4px; }
@@ -89,7 +89,23 @@ label.lbl { font-size: 13px; font-weight: 600; color: var(--color-muted); displa
 .tile:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(184,154,82,.15); }
 .tile img, .prod-img { width: 100%; aspect-ratio: 1; object-fit: cover; background: #EFE5E5; display: block; }
 .tile .pad { padding: 12px 14px; }
-.shell { display: flex; min-height: 100vh; }
+.shell {
+  display: flex; min-height: 100vh;
+
+  /* Admin theme: pure-white cards on a soft grey canvas.
+     Scoped to .shell so the public landing page keeps the warm palette. */
+  --color-bg: #F5F6F8;       /* soft grey canvas */
+  --color-card: #FFFFFF;     /* pure white cards */
+  --color-surface: #FFFFFF;
+  --color-border: #E7E9EE;   /* cool hairline border for white surfaces */
+
+  /* Admin typography: warm geometric sans for UI + a richer luxury serif for headings.
+     Scoped here so the landing page keeps Cormorant Garamond / Inter. */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
 
 /* ── Luxe dark sidebar ─────────────────────────── */
 .sidebar {

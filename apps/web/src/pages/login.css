@@ -1,0 +1,105 @@
+/* ==========================================================================
+   Sign-in page — split brand / form card.
+   Namespaced with `.auth-` and built on the shared brand tokens in index.css
+   so it matches the public storefront (Cormorant headings, gold accents).
+   ========================================================================== */
+
+.auth-page {
+  min-height: calc(100vh - 150px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 44px 22px 72px;
+  background:
+    radial-gradient(900px 420px at 10% -12%, rgba(214, 180, 92, .16), transparent 60%),
+    radial-gradient(720px 380px at 100% 0%, rgba(197, 141, 153, .14), transparent 55%),
+    var(--color-bg);
+}
+
+.auth-card {
+  width: 100%; max-width: 940px;
+  display: grid; grid-template-columns: 1.05fr 1fr;
+  background: #fff; border: 1px solid var(--color-border);
+  border-radius: 20px; overflow: hidden;
+  box-shadow: 0 24px 60px rgba(71, 16, 29, .14);
+  animation: pageIn var(--motion-page) var(--ease-standard);
+}
+
+/* ── Brand pane ───────────────────────────────────────────────────────── */
+.auth-brand {
+  position: relative; color: var(--color-ivory); overflow: hidden;
+  background: linear-gradient(155deg, var(--color-burgundy) 0%, var(--color-wine) 100%);
+}
+.auth-brand::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(520px 320px at 82% 0%, rgba(214, 180, 92, .30), transparent 62%),
+    repeating-linear-gradient(135deg, rgba(214, 180, 92, .06) 0 10px, transparent 10px 20px);
+}
+.auth-brand-inner {
+  position: relative; z-index: 1; height: 100%;
+  padding: 44px 40px; display: flex; flex-direction: column;
+}
+.auth-logo { height: 44px; width: auto; align-self: flex-start; margin-bottom: 24px; }
+.auth-brand-name {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 34px; line-height: 1.1; margin: 0 0 12px; color: #fff;
+}
+.auth-brand-name em { color: var(--color-gold); font-style: normal; }
+.auth-brand-tag {
+  color: rgba(251, 243, 237, .78); font-size: 14px; line-height: 1.6;
+  margin: 0 0 28px; max-width: 32ch;
+}
+.auth-points { list-style: none; margin: 0 0 auto; padding: 0; display: grid; gap: 13px; }
+.auth-points li { position: relative; padding-left: 26px; font-size: 13.5px; color: rgba(251, 243, 237, .9); }
+.auth-points li::before {
+  content: '✓'; position: absolute; left: 0; top: 0;
+  color: var(--color-gold); font-weight: 700;
+}
+.auth-back {
+  margin-top: 30px; align-self: flex-start;
+  color: rgba(251, 243, 237, .72); text-decoration: none;
+  font-size: 13px; font-weight: 600; transition: color var(--motion-fast);
+}
+.auth-back:hover { color: var(--color-gold); }
+
+/* ── Form pane ────────────────────────────────────────────────────────── */
+.auth-form-inner { padding: 44px 40px; }
+.auth-eyebrow {
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--color-gold-deep); margin-bottom: 8px;
+}
+.auth-title { font-family: var(--font-display); font-size: 30px; font-weight: 600; margin: 0 0 4px; }
+.auth-sub { color: var(--color-muted); font-size: 13.5px; margin: 0 0 20px; }
+
+.auth-pw { position: relative; }
+.auth-pw input { padding-right: 66px; }
+.auth-pw-toggle {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  border: 0; background: none; color: var(--color-gold-deep);
+  font-weight: 700; font-size: 12px; cursor: pointer; padding: 7px 9px; border-radius: 6px;
+  transition: background var(--motion-fast);
+}
+.auth-pw-toggle:hover { background: var(--color-blush); }
+
+.auth-submit {
+  width: 100%; margin-top: 18px; padding: 13px; font-size: 15px; letter-spacing: .3px;
+  background: linear-gradient(135deg, var(--color-burgundy), var(--color-wine));
+}
+.auth-submit:hover { background: linear-gradient(135deg, var(--color-wine), var(--color-wine-hover)); }
+.auth-submit:disabled { opacity: .65; cursor: progress; }
+
+.auth-seed { margin-top: 16px; font-size: 12px; color: var(--color-muted); }
+.auth-seed code {
+  background: var(--color-card); border: 1px solid var(--color-border);
+  border-radius: 5px; padding: 1px 6px; font-size: 11.5px; color: var(--color-espresso);
+}
+
+@media (max-width: 780px) {
+  .auth-page { padding: 26px 16px 48px; }
+  .auth-card { grid-template-columns: 1fr; max-width: 460px; }
+  .auth-brand-inner { padding: 26px 24px 24px; }
+  .auth-brand-name { font-size: 27px; margin-bottom: 8px; }
+  .auth-brand-tag { margin-bottom: 10px; }
+  .auth-points { display: none; }
+  .auth-back { margin-top: 10px; }
+  .auth-form-inner { padding: 28px 24px; }
+}

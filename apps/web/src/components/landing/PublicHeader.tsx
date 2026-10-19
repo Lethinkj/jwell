@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/auth';
 import { api, inr } from '../../lib/api';
 import { LandIcon } from './landingIcons';
+import '../../pages/landing.css';
 
 /* Shared public storefront header. Self-fetches categories and the live rate so
    it can be dropped on any public page; the landing page passes the data it has
