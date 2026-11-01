@@ -20,6 +20,10 @@ import Reports from './pages/admin/Reports';
 import Settings from './pages/admin/Settings';
 import EmailSettings from './pages/admin/EmailSettings';
 import AuditLogs from './pages/admin/AuditLogs';
+import HREmployees from './pages/admin/hr/Employees';
+import HRAttendance from './pages/admin/hr/Attendance';
+import HRLeaves from './pages/admin/hr/Leaves';
+import HRPayroll from './pages/admin/hr/Payroll';
 import AdminBreadcrumbs from './components/AdminBreadcrumbs';
 import CampaignReminderModal from './components/CampaignReminderModal';
 import { Icon, ICONS } from './components/icons';
@@ -46,14 +50,17 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   const inInventory = loc.pathname.startsWith('/admin/inventory');
   const inBilling = loc.pathname.startsWith('/admin/billing');
   const inCustomers = loc.pathname.startsWith('/admin/customers');
+  const inHr = loc.pathname.startsWith('/admin/hr');
   const [invOpen, setInvOpen] = useState(inInventory);
-  const [billingOpen, setBillingOpen] = useState<boolean>(!inInventory && !inCustomers);
+  const [billingOpen, setBillingOpen] = useState<boolean>(!inInventory && !inCustomers && !inHr);
   const [custOpen, setCustOpen] = useState(inCustomers);
+  const [hrOpen, setHrOpen] = useState(inHr);
   useEffect(() => {
-    if (inCustomers) { setCustOpen(true); setBillingOpen(false); setInvOpen(false); }
-    else if (inBilling) { setBillingOpen(true); setInvOpen(false); setCustOpen(false); }
-    else if (inInventory) { setInvOpen(true); setBillingOpen(false); setCustOpen(false); }
-  }, [inInventory, inBilling, inCustomers]);
+    if (inCustomers) { setCustOpen(true); setBillingOpen(false); setInvOpen(false); setHrOpen(false); }
+    else if (inBilling) { setBillingOpen(true); setInvOpen(false); setCustOpen(false); setHrOpen(false); }
+    else if (inInventory) { setInvOpen(true); setBillingOpen(false); setCustOpen(false); setHrOpen(false); }
+    else if (inHr) { setHrOpen(true); setBillingOpen(false); setInvOpen(false); setCustOpen(false); }
+  }, [inInventory, inBilling, inCustomers, inHr]);
   if (loading) return <div className="main"><div className="skeleton" style={{ height: 120 }} /></div>;
   if (!user) return <Navigate to="/login" replace />;
   const isAdmin = user.role === 'admin';
@@ -70,6 +77,12 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   const custKids: NavItem[] = [
     { to: '/admin/customers', label: 'All Customers', icon: ICONS.customers, end: true },
     { to: '/admin/customers/new', label: 'New Customer', icon: ICONS.customers },
+  ];
+  const hrKids: NavItem[] = [
+    { to: '/admin/hr/employees', label: 'Employees', icon: ICONS.staff },
+    { to: '/admin/hr/attendance', label: 'Attendance', icon: ICONS.calendar },
+    { to: '/admin/hr/leaves', label: 'Leave & Holidays', icon: ICONS.calendar },
+    { to: '/admin/hr/payroll', label: 'Payroll', icon: ICONS.payroll },
   ];
   const navLink = (item: NavItem) => (
     <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => isActive ? 'active' : ''} onClick={close}>
@@ -90,13 +103,13 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
         {isAdmin && navLink(NAV_OVERVIEW)}
         <div className="sidebar-section">Operations</div>
-        <button type="button" className={`nav-group${inBilling ? ' active' : ''}`} onClick={() => { setBillingOpen((o) => !o); setInvOpen(false); setCustOpen(false); }} aria-expanded={billingOpen}>
+        <button type="button" className={`nav-group${inBilling ? ' active' : ''}`} onClick={() => { setBillingOpen((o) => !o); setInvOpen(false); setCustOpen(false); setHrOpen(false); }} aria-expanded={billingOpen}>
           <Icon paths={ICONS.billing} /><span>Billing</span><span className={`chev${billingOpen ? ' open' : ''}`}>‹</span>
         </button>
         {billingOpen && <div className="nav-sub">{billingKids.map(navLink)}</div>}
         {isAdmin && (
           <>
-            <button type="button" className={`nav-group${inInventory ? ' active' : ''}`} onClick={() => { setInvOpen((o) => !o); setBillingOpen(false); setCustOpen(false); }} aria-expanded={invOpen}>
+            <button type="button" className={`nav-group${inInventory ? ' active' : ''}`} onClick={() => { setInvOpen((o) => !o); setBillingOpen(false); setCustOpen(false); setHrOpen(false); }} aria-expanded={invOpen}>
               <Icon paths={ICONS.inventory} /><span>Inventory</span><span className={`chev${invOpen ? ' open' : ''}`}>‹</span>
             </button>
             {invOpen && <div className="nav-sub">{invKids.map(navLink)}</div>}
@@ -106,10 +119,14 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         <div className="sidebar-section">Manage</div>
         {isAdmin ? (
           <>
-            <button type="button" className={`nav-group${inCustomers ? ' active' : ''}`} onClick={() => { setCustOpen((o) => !o); setBillingOpen(false); setInvOpen(false); }} aria-expanded={custOpen}>
+            <button type="button" className={`nav-group${inCustomers ? ' active' : ''}`} onClick={() => { setCustOpen((o) => !o); setBillingOpen(false); setInvOpen(false); setHrOpen(false); }} aria-expanded={custOpen}>
               <Icon paths={ICONS.customers} /><span>Customers &amp; CRM</span><span className={`chev${custOpen ? ' open' : ''}`}>‹</span>
             </button>
             {custOpen && <div className="nav-sub">{custKids.map(navLink)}</div>}
+            <button type="button" className={`nav-group${inHr ? ' active' : ''}`} onClick={() => { setHrOpen((o) => !o); setBillingOpen(false); setInvOpen(false); setCustOpen(false); }} aria-expanded={hrOpen}>
+              <Icon paths={ICONS.staff} /><span>HR Management</span><span className={`chev${hrOpen ? ' open' : ''}`}>‹</span>
+            </button>
+            {hrOpen && <div className="nav-sub">{hrKids.map(navLink)}</div>}
             {navLink(NAV_STAFF)}
             {navLink(NAV_RATES)}
             {navLink(NAV_CAMPAIGNS)}
@@ -184,6 +201,11 @@ export default function App() {
             <Route path="/admin/customers" element={<AdminShell><Customers mode="view" /></AdminShell>} />
             <Route path="/admin/customers/new" element={<AdminShell><Customers mode="new" /></AdminShell>} />
             <Route path="/admin/staff" element={<AdminShell><RequireAdmin><Staff /></RequireAdmin></AdminShell>} />
+            <Route path="/admin/hr" element={<Navigate to="/admin/hr/employees" replace />} />
+            <Route path="/admin/hr/employees" element={<AdminShell><RequireAdmin><HREmployees /></RequireAdmin></AdminShell>} />
+            <Route path="/admin/hr/attendance" element={<AdminShell><RequireAdmin><HRAttendance /></RequireAdmin></AdminShell>} />
+            <Route path="/admin/hr/leaves" element={<AdminShell><RequireAdmin><HRLeaves /></RequireAdmin></AdminShell>} />
+            <Route path="/admin/hr/payroll" element={<AdminShell><RequireAdmin><HRPayroll /></RequireAdmin></AdminShell>} />
             <Route path="/admin/rates" element={<AdminShell><RequireAdmin><Rates /></RequireAdmin></AdminShell>} />
             <Route path="/admin/campaigns" element={<AdminShell><RequireAdmin><Campaigns /></RequireAdmin></AdminShell>} />
             <Route path="/admin/reports" element={<AdminShell><RequireAdmin><Reports /></RequireAdmin></AdminShell>} />

@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const { get, all, run, initDb, closeDb, uid } = require('./db');
 const { storeRate } = require('./services/rates');
 const { normalizePhone } = require('./services/phone');
+const { seedHrDemo } = require('./seed-hr');
 
 async function ensureShop() {
   let shop = await get('SELECT * FROM shops LIMIT 1');
@@ -121,6 +122,8 @@ async function main() {
     await run(`INSERT INTO offers (id, shop_id, code, description, discount_type, discount_value, min_purchase_inr, max_discount_inr, valid_from, valid_to)
       VALUES (?,?,?,?,?,?,?,?,?,?)`, uid('off'), shop.id, 'BDAY5', 'Birthday 5% off (capped ₹5,000)', 'percent', 5, 10000, 5000, '2026-01-01', '2027-12-31');
   }
+  console.log('[seed] HR demo staff, attendance, leave and payroll');
+  await seedHrDemo(shop, admin);
   console.log('[seed] done. Logins: admin@shop.local/Admin@123, billing@shop.local/Billing@123');
   await closeDb();
 }

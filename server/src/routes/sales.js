@@ -9,8 +9,16 @@ const router = express.Router();
 router.use(auth);
 
 async function nextInvoiceNo(tx) {
+  // Serialize invoice allocation for the duration of the transaction so two
+  // concurrent finalizes can never compute the same number.
+  await tx.get('SELECT pg_advisory_xact_lock(?)', 727002);
   const y = new Date().getFullYear();
-  const n = (await tx.get(`SELECT COUNT(*) n FROM sales WHERE invoice_no LIKE ?`, `INV-${y}-%`)).n + 1;
+  // Last-used number, not COUNT(*): voided/deleted rows would otherwise make
+  // COUNT+1 collide with an invoice number that already exists.
+  const last = await tx.get(
+    `SELECT invoice_no FROM sales WHERE invoice_no LIKE ? ORDER BY invoice_no DESC LIMIT 1`,
+    `INV-${y}-%`);
+  const n = last ? Number(String(last.invoice_no).split('-').pop()) + 1 : 1;
   return `INV-${y}-${String(n).padStart(5, '0')}`;
 }
 

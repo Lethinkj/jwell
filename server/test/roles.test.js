@@ -23,6 +23,8 @@ let custId = '';
 // Unique per run so the suite can be re-run against the same database without
 // fixture collisions (emails are globally unique in `profiles`).
 const runId = Date.now().toString(36);
+const barcodeValue = `TST-${runId}`;
+const barcodeValue2 = `${barcodeValue}-2`;
 const adminEmail = `admin_${runId}@test.local`;
 const billEmail = `bill_${runId}@test.local`;
 
@@ -56,8 +58,8 @@ before(async () => {
   prodId = uid('prd');
   await run(`INSERT INTO products (id, shop_id, category_id, sku, name, purity, gross_weight_g, net_gold_weight_g,
     making_charge_type, making_charge_value, acquisition_cost_inr, status)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, prodId, shopId, cat, 'TST-1', 'Test Ring', '22K', 5, 4.8, 'percentage', 10, 40000, 'available');
-  await run(`INSERT INTO product_barcodes (id, product_id, shop_id, barcode_value) VALUES (?,?,?,?)`, uid('bc'), prodId, shopId, 'TST-1');
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, prodId, shopId, cat, barcodeValue, 'Test Ring', '22K', 5, 4.8, 'percentage', 10, 40000, 'available');
+  await run(`INSERT INTO product_barcodes (id, product_id, shop_id, barcode_value) VALUES (?,?,?,?)`, uid('bc'), prodId, shopId, barcodeValue);
   custId = uid('cus');
   await run(`INSERT INTO customers (id, shop_id, customer_code, name, phone, normalized_phone, address_line1, city, state, postal_code) VALUES (?,?,?,?,?,?,?,?,?,?)`,
     custId, shopId, 'C00001', 'Test Customer', '9876500001', '9876500001', '1 Test St', 'Bengaluru', 'KA', '560001');
@@ -94,7 +96,7 @@ test('roles: billing blocked from admin endpoints, admin allowed', async () => {
   }
   const ok = await api('GET', '/products', billTok);
   assert.equal(ok.status, 200);
-  const bc = await api('GET', '/products/barcode/TST-1', billTok);
+  const bc = await api('GET', `/products/barcode/${barcodeValue}`, billTok);
   assert.equal(bc.status, 200);
 });
 
@@ -143,13 +145,13 @@ test('barcode assign: duplicates rejected without confirm; reassign audited', as
   const cat = (await get(`SELECT id FROM categories WHERE shop_id=? LIMIT 1`, shopId)).id;
   await run(`INSERT INTO products (id, shop_id, category_id, sku, name, purity, gross_weight_g, net_gold_weight_g, acquisition_cost_inr, status)
     VALUES (?,?,?,?,?,?,?,?,?,?)`, p2, shopId, cat, 'TST-2', 'Ring 2', '22K', 5, 4.8, 40000, 'available');
-  const taken = await api('POST', `/products/${p2}/barcode`, adminTok, { barcode_value: 'TST-1' });
+  const taken = await api('POST', `/products/${p2}/barcode`, adminTok, { barcode_value: barcodeValue });
   assert.equal(taken.status, 409);
-  const same = await api('POST', `/products/${p2}/barcode`, adminTok, { barcode_value: 'TST-2-NEW', confirm: true });
+  const same = await api('POST', `/products/${p2}/barcode`, adminTok, { barcode_value: barcodeValue2, confirm: true });
   assert.equal(same.status, 201);
   const lbl = await api('GET', `/products/${p2}/label`, adminTok);
   assert.equal(lbl.status, 200);
-  assert.equal(lbl.body.data.barcode_value, 'TST-2-NEW');
+  assert.equal(lbl.body.data.barcode_value, barcodeValue2);
   const aud = await get(`SELECT id FROM audit_logs WHERE action='barcode.assign' AND entity_id=?`, p2);
   assert.ok(aud, 'barcode assignment must be audited');
 });

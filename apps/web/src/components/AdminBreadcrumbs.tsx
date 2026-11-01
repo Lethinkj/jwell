@@ -49,6 +49,12 @@ export default function AdminBreadcrumbs() {
     crumbs.push({ label: 'Email' });
   } else if (path === '/admin/audit') {
     crumbs.push({ label: 'Audit Logs' });
+  } else if (path.startsWith('/admin/hr')) {
+    crumbs.push({ label: 'HR Management', to: '/admin/hr/employees' });
+    if (path === '/admin/hr/attendance') crumbs.push({ label: 'Attendance' });
+    else if (path === '/admin/hr/leaves') crumbs.push({ label: 'Leave & Holidays' });
+    else if (path === '/admin/hr/payroll') crumbs.push({ label: 'Payroll' });
+    else crumbs.push({ label: 'Employees' });
   } else {
     const segments = path.replace(/^\/admin\/?/, '').split('/').filter(Boolean);
     segments.forEach((seg, i) => {

@@ -15,6 +15,7 @@ const bcrypt = require('bcryptjs');
 const { get, all, run, initDb, closeDb, uid } = require('./db');
 const { priceLine } = require('./services/pricing');
 const { normalizePhone } = require('./services/phone');
+const { seedHrDemo } = require('./seed-hr');
 
 const PURITY_FACTORS = { '24K': 1.0, '22K': 0.916, '18K': 0.75, '14K': 0.585 };
 
@@ -277,6 +278,7 @@ async function main() {
   const pool = await seedProducts(shop.id);
   await seedCustomers(shop.id);
   await seedSales(shop.id, admin.user_id, billing.user_id, rateInfo, pool);
+  await seedHrDemo(shop, admin);
 
   const rev = await get(`SELECT COUNT(*) c, COALESCE(SUM(total_inr),0) s FROM sales WHERE shop_id=? AND status='finalized'`, shop.id);
   console.log(`[seed-demo] done — ${rev.c} finalized bills, ${Math.round(Number(rev.s)).toLocaleString('en-IN')} total revenue. Logins: admin@shop.local/Admin@123, billing@shop.local/Billing@123`);
