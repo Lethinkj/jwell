@@ -403,6 +403,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
     <div className="page" style={{ maxWidth: 1280, margin: '0 auto' }}>
       {/* Top Header Bar: Clean Page Title & Context */}
       <div
+        className="card"
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -410,11 +411,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
           flexWrap: 'wrap',
           gap: 16,
           padding: '16px 22px',
-          background: '#FFFFFF',
-          border: '1px solid var(--color-border)',
-          borderRadius: 14,
           marginBottom: 20,
-          boxShadow: '0 2px 8px rgba(71,16,29,0.05)',
         }}
       >
         <div>
@@ -444,7 +441,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
           style={{
             marginBottom: 18,
             padding: '12px 18px',
-            backgroundColor: msg.type === 'error' ? '#FDE7E5' : msg.type === 'success' ? '#E3F3EA' : '#FFFFFF',
+            backgroundColor: msg.type === 'error' ? '#FDE7E5' : msg.type === 'success' ? '#E3F3EA' : 'var(--color-surface)',
             border: `1px solid ${msg.type === 'error' ? 'var(--color-error)' : msg.type === 'success' ? 'var(--color-success)' : 'var(--color-gold)'}`,
             color: msg.type === 'error' ? '#7A1F16' : msg.type === 'success' ? 'var(--color-success)' : 'var(--color-espresso)',
             display: 'flex',
@@ -471,7 +468,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
             <div
               className="card"
               style={{
-                background: 'linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 100%)',
+                background: 'var(--luxe-surface)',
                 border: '2px solid var(--color-gold)',
                 borderRadius: 14,
                 padding: 24,
@@ -654,7 +651,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
 
                       {/* Multiple Phone Matches Picker */}
                       {phoneMatches.length > 0 && (
-                        <div style={{ marginTop: 14, background: '#FFFFFF', border: '1px solid var(--color-border)', borderRadius: 10, padding: 14 }}>
+                        <div style={{ marginTop: 14, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, padding: 14 }}>
                           <strong style={{ fontSize: 13, color: 'var(--color-espresso)' }}>Multiple profiles share this number — select the customer:</strong>
                           <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {phoneMatches.map((m: any) => (
@@ -663,7 +660,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                                 onClick={() => handleCustomerSelectedAndProceed(m)}
                                 style={{
                                   padding: 12,
-                                  background: '#fff',
+                                  background: 'var(--color-surface)',
                                   borderRadius: 8,
                                   border: '1px solid var(--color-border)',
                                   cursor: 'pointer',
@@ -692,7 +689,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                   {customerType === 'new' && !customer && (
                     <div
                       style={{
-                        background: 'linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 100%)',
+                        background: 'var(--luxe-surface)',
                         border: '1px solid var(--color-border)',
                         borderRadius: 12,
                         padding: 18,
@@ -857,7 +854,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                   {customer && (
                     <div
                       style={{
-                        background: 'linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 100%)',
+                        background: 'var(--luxe-surface)',
                         borderRadius: 12,
                         border: '1.5px solid var(--color-gold)',
                         padding: 16,
@@ -941,10 +938,10 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                           </button>
 
                           {showPastBills && (
-                            <div style={{ marginTop: 8, maxHeight: 180, overflowY: 'auto', background: '#fff', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+                            <div style={{ marginTop: 8, maxHeight: 180, overflowY: 'auto', background: 'var(--color-surface)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
                               <table className="tbl" style={{ width: '100%', fontSize: 12 }}>
                                 <thead>
-                                  <tr style={{ background: '#FFFFFF' }}>
+                                  <tr style={{ background: 'var(--color-surface)' }}>
                                     <th>Invoice</th>
                                     <th>Date</th>
                                     <th>Amount</th>
@@ -998,7 +995,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      background: '#FFFFFF',
+                      background: 'var(--color-surface)',
                       padding: '10px 14px',
                       borderRadius: 8,
                       marginBottom: 16,
@@ -1082,7 +1079,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                           padding: '48px 16px',
                           border: '1.5px dashed var(--color-border)',
                           borderRadius: 10,
-                          background: '#FFFFFF',
+                          background: 'var(--color-surface)',
                         }}
                       >
                         <div style={{ fontSize: 36, marginBottom: 8 }}>💍</div>
@@ -1103,7 +1100,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                       <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 8 }}>
                         <table className="tbl" style={{ width: '100%', margin: 0 }}>
                           <thead>
-                            <tr style={{ background: '#FFFFFF' }}>
+                            <tr style={{ background: 'var(--color-surface)' }}>
                               <th>Item &amp; SKU</th>
                               <th>Purity</th>
                               <th>Net Wt (g)</th>
@@ -1122,7 +1119,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                                   <div style={{ fontSize: 11, color: 'var(--color-muted)' }}>SKU: {l.sku}</div>
                                 </td>
                                 <td>
-                                  <span className="chip" style={{ margin: 0, padding: '2px 8px', fontSize: 11, background: '#FFFFFF', border: '1px solid var(--color-gold)' }}>
+                                  <span className="chip" style={{ margin: 0, padding: '2px 8px', fontSize: 11, background: 'var(--color-surface)', border: '1px solid var(--color-gold)' }}>
                                     {l.purity}
                                   </span>
                                 </td>
@@ -1147,7 +1144,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                             ))}
                           </tbody>
                           <tfoot>
-                            <tr style={{ background: '#FFFFFF', fontWeight: 700, borderTop: '2px solid var(--color-border)' }}>
+                            <tr style={{ background: 'var(--color-surface)', fontWeight: 700, borderTop: '2px solid var(--color-border)' }}>
                               <td colSpan={2}>Total ({lines.length} pieces)</td>
                               <td>{totalNetGoldWeight.toFixed(3)}g</td>
                               <td>{inr(lines.reduce((s, l) => s + (l.est?.gold_value_inr || 0), 0))}</td>
@@ -1196,7 +1193,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      background: '#FFFFFF',
+                      background: 'var(--color-surface)',
                       padding: '10px 14px',
                       borderRadius: 8,
                       marginBottom: 16,
@@ -1233,7 +1230,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                       display: 'grid',
                       gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                       gap: 14,
-                      background: '#FFFFFF',
+                      background: 'var(--color-surface)',
                       padding: 14,
                       borderRadius: 10,
                       marginBottom: 16,
@@ -1257,7 +1254,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                   {/* Discounts Section (Optional) */}
                   <div
                     style={{
-                      background: '#FFFFFF',
+                      background: 'var(--color-surface)',
                       border: '1px solid var(--color-border)',
                       borderRadius: 10,
                       padding: 16,
@@ -1353,7 +1350,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                   {/* EDITABLE FINAL PRICE BOX (MANDATORY) */}
                   <div
                     style={{
-                      background: '#FFFFFF',
+                      background: 'var(--color-surface)',
                       border: isFinalPriceManuallyEdited ? '2px solid var(--color-rose)' : '2px solid var(--color-gold)',
                       borderRadius: 12,
                       padding: 16,
@@ -1536,7 +1533,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
             <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 10 }}>
               <table className="tbl" style={{ width: '100%', margin: 0 }}>
                 <thead>
-                  <tr style={{ background: '#FFFFFF' }}>
+                  <tr style={{ background: 'var(--color-surface)' }}>
                     <th style={{ width: 56 }}>S.No</th>
                     <th>Invoice No</th>
                     <th>Date &amp; Time</th>

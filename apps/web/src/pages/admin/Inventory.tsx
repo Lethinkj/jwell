@@ -55,7 +55,7 @@ export default function Inventory() {
 
       <div className="grid kpi">
         {[['Pieces (filter)', totPieces], ['Net gold (filter)', `${totGold.toFixed(2)} g`], ['Acquisition value', inr(totAcq)], ['Low-stock categories', lowCats.length || 'none']].map(([k, v]) => (
-          <div key={k} className="card"><small style={{ color: 'var(--color-muted)' }}>{k}</small><div style={{ fontSize: 22, fontWeight: 700 }}>{v}</div></div>))}
+          <div key={k} className="card"><small style={{ color: 'var(--color-muted)' }}>{k}</small><div className="kpi-value">{v}</div></div>))}
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>

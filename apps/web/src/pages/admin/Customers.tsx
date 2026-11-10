@@ -119,7 +119,7 @@ function CustomerDetailModal({ customerId, onClose, onChanged }: { customerId: s
       <div
         onClick={(e) => e.stopPropagation()}
         className="card"
-        style={{ background: '#FFFFFF', maxWidth: 780, width: '100%', maxHeight: '90vh', overflowY: 'auto', borderTop: '4px solid var(--color-gold-deep)' }}
+        style={{ background: 'var(--color-surface)', maxWidth: 780, width: '100%', maxHeight: '90vh', overflowY: 'auto', borderTop: '4px solid var(--color-gold-deep)' }}
       >
         {msg && <div style={{ marginBottom: 10, fontSize: 13 }}>{msg}</div>}
         {!d ? <div className="empty" style={{ padding: 40 }}>Loading…</div> : (
@@ -282,7 +282,7 @@ function CustomerList() {
           <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 10 }}>
             <table className="tbl" style={{ width: '100%', margin: 0 }}>
               <thead>
-                <tr style={{ background: '#FFFFFF' }}>
+                <tr style={{ background: 'var(--color-surface)' }}>
                   <th style={{ width: 56 }}>S.No</th>
                   <th>Code</th>
                   <th>Name</th>

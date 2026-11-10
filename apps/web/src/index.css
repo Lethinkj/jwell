@@ -92,12 +92,12 @@ label.lbl { font-size: 13px; font-weight: 600; color: var(--color-muted); displa
 .shell {
   display: flex; min-height: 100vh;
 
-  /* Admin theme: pure-white cards on a soft grey canvas.
+  /* Admin theme: ivory cards on a warm parchment canvas.
      Scoped to .shell so the public landing page keeps the warm palette. */
-  --color-bg: #F5F6F8;       /* soft grey canvas */
-  --color-card: #FFFFFF;     /* pure white cards */
-  --color-surface: #FFFFFF;
-  --color-border: #E7E9EE;   /* cool hairline border for white surfaces */
+  --color-bg: #F4EEE4;       /* warm parchment canvas */
+  --color-card: #FFFDF9;     /* warm ivory cards */
+  --color-surface: #FFFDF9;
+  --color-border: #E8DCCB;   /* warm hairline border */
 
   /* Admin typography: warm geometric sans for UI + a richer luxury serif for headings.
      Scoped here so the landing page keeps Cormorant Garamond / Inter. */
@@ -329,13 +329,450 @@ label.lbl { font-size: 13px; font-weight: 600; color: var(--color-muted); displa
   .hr-kpis { grid-template-columns: 1fr; }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   Admin "Luxe layered" box theme — scoped to .shell
+   Warm ivory surfaces, gold hairlines, layered shadows, 16px radius.
+   The public site and sign-in card keep the original palette.
+   ══════════════════════════════════════════════════════════════════ */
+.shell {
+  --luxe-radius: 16px;
+  --luxe-border: rgba(184, 154, 82, .30);
+  --luxe-border-strong: rgba(184, 154, 82, .52);
+  --luxe-cream: #FAF5EB;
+  --luxe-cream-deep: #F5EDDF;
+  --luxe-surface: linear-gradient(180deg, #FFFEFB 0%, #FFFCF6 62%, #FFFBF3 100%);
+  --luxe-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .92),
+    0 1px 2px rgba(71, 16, 29, .04),
+    0 12px 28px -16px rgba(71, 16, 29, .16),
+    0 34px 64px -44px rgba(71, 16, 29, .22);
+  --luxe-shadow-hover:
+    inset 0 1px 0 rgba(255, 255, 255, .95),
+    0 2px 4px rgba(71, 16, 29, .05),
+    0 20px 40px -20px rgba(71, 16, 29, .22),
+    0 46px 80px -50px rgba(71, 16, 29, .28);
+}
+
+/* Warm canvas with a faint gold bloom behind the content */
+.shell .main {
+  background:
+    radial-gradient(1100px 520px at 92% -6%, rgba(214, 180, 92, .13), transparent 62%),
+    radial-gradient(760px 480px at -8% 102%, rgba(197, 141, 153, .07), transparent 60%),
+    var(--color-bg);
+}
+
+/* ── Base surfaces ─────────────────────────────────────────────── */
+.shell .card {
+  position: relative;
+  padding: 20px;
+  border: 1px solid var(--luxe-border);
+  border-radius: var(--luxe-radius);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(214, 180, 92, .45), rgba(255, 255, 255, 0)) top / 100% 1px no-repeat,
+    var(--luxe-surface);
+  box-shadow: var(--luxe-shadow);
+}
+.shell .card > strong:first-child {
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: .1px;
+  color: #3A1820;
+}
+
+/* ── KPI boxes ─────────────────────────────────────────────────── */
+.shell .kpi-card {
+  justify-content: center;
+  gap: 11px;
+  min-height: 112px;
+  padding: 18px 20px;
+  overflow: hidden;
+  transition:
+    transform var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard);
+}
+.shell .kpi-card::before {
+  inset: 16px auto 16px 0;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, var(--tint, var(--color-gold)), rgba(184, 154, 82, .22));
+}
+.shell .kpi-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(190px 130px at 100% 0%, var(--tint, var(--color-gold)), transparent 68%);
+  opacity: .07;
+}
+.shell .kpi-card > * { position: relative; z-index: 1; }
+.shell .kpi-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--luxe-border-strong);
+  box-shadow: var(--luxe-shadow-hover);
+}
+.shell .kpi-head small {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: #8A7860;
+}
+.shell .kpi-ico {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85);
+}
+.shell .kpi-value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -.3px;
+  color: #3A1820;
+}
+.shell .kpi-value-sm { font-size: 22px; letter-spacing: -.2px; }
+.shell .kpi-value-xs { font-size: 18px; letter-spacing: -.1px; }
+
+/* Compact KPI boxes that use a plain .card (Inventory, Reports) */
+.shell .grid.kpi > .card:not(.kpi-card) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  min-height: 104px;
+  padding: 18px 20px;
+}
+.shell .grid.kpi > .card:not(.kpi-card) > small {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #8A7860;
+}
+
+/* ── Headings ──────────────────────────────────────────────────── */
+.shell .page > h1,
+.shell .hr-head h1 { color: #3A1820; letter-spacing: -.35px; }
+.shell .page > h1::after {
+  content: '';
+  display: block;
+  width: 46px;
+  height: 2px;
+  margin-top: 12px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--color-gold-deep), rgba(184, 154, 82, 0));
+}
+
+/* ── Tables ────────────────────────────────────────────────────── */
+.shell .tbl { font-size: 13.5px; }
+.shell .tbl th {
+  background: var(--luxe-cream);
+  border-bottom: 1px solid #EDE2D1;
+  color: #8A7860;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1.05px;
+}
+.shell .tbl th:first-child { border-radius: 10px 0 0 10px; }
+.shell .tbl th:last-child { border-radius: 0 10px 10px 0; }
+.shell .tbl td { border-bottom: 1px solid #F1E8DA; }
+.shell .tbl tbody tr:last-child td { border-bottom: 0; }
+.shell .tbl tr:hover td { background: #FBF6ED; }
+
+/* ── Forms ─────────────────────────────────────────────────────── */
+.shell input,
+.shell select,
+.shell textarea {
+  background: #FFFDF9;
+  border: 1px solid #E5D8C5;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 2px rgba(71, 16, 29, .04);
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+.shell input::placeholder,
+.shell textarea::placeholder { color: #B4A48E; }
+.shell input:focus,
+.shell select:focus,
+.shell textarea:focus {
+  outline: none;
+  border-color: var(--color-gold-deep);
+  box-shadow: 0 0 0 3px rgba(214, 180, 92, .18), inset 0 1px 2px rgba(71, 16, 29, .03);
+}
+.shell label.lbl { color: #8A7860; font-size: 12px; font-weight: 700; letter-spacing: .2px; }
+
+/* Compact segmented period selector (Dashboard / Reports) */
+.shell .preset-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 4px;
+  margin: 12px 0 4px;
+  background: linear-gradient(180deg, #F5EDDF 0%, #F8F2E7 100%);
+  border: 1px solid #E5D8C5;
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 2px rgba(71, 16, 29, .05),
+    inset 0 -1px 0 rgba(255, 255, 255, .8);
+}
+.shell .preset-tab {
+  border: 0;
+  background: transparent;
+  color: #8A7860;
+  border-radius: 999px;
+  padding: 7px 15px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--motion-fast), color var(--motion-fast), box-shadow var(--motion-fast);
+}
+.shell .preset-tab:hover { color: #3A1820; background: rgba(255, 255, 255, .6); }
+.shell .preset-tab.active {
+  background: linear-gradient(180deg, #E7CB84 0%, #D3AE56 100%);
+  color: #3C2608;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .55),
+    0 2px 6px rgba(184, 154, 82, .28);
+}
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+.shell .btn {
+  border-radius: 10px;
+  background: linear-gradient(180deg, #631729 0%, #4A0E1C 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .12),
+    0 2px 6px rgba(71, 16, 29, .18);
+}
+.shell .btn:hover {
+  background: linear-gradient(180deg, #742136 0%, #571322 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .14),
+    0 8px 18px -8px rgba(71, 16, 29, .45);
+}
+.shell .btn:active { transform: translateY(1px) scale(.995); }
+.shell .btn.gold {
+  background: linear-gradient(180deg, #E7CB84 0%, #D3AE56 100%);
+  color: #3C2608;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .55),
+    0 2px 6px rgba(184, 154, 82, .28);
+}
+.shell .btn.gold:hover {
+  background: linear-gradient(180deg, #EDD392 0%, #DCB965 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .6),
+    0 8px 18px -8px rgba(184, 154, 82, .55);
+}
+.shell .btn.ghost {
+  background: linear-gradient(180deg, #FFFDF9 0%, #FCF7EE 100%);
+  border-color: #E4D7C4;
+  color: #4A2A2E;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 2px rgba(71, 16, 29, .04);
+}
+.shell .btn.ghost:hover {
+  background: #FBF4E8;
+  border-color: var(--luxe-border-strong);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 4px 12px -8px rgba(184, 154, 82, .5);
+}
+.shell .btn:focus-visible { outline: 2px solid var(--color-gold-deep); outline-offset: 2px; }
+.shell .btn.sm { border-radius: 9px; }
+.shell .btn.xs { border-radius: 8px; }
+
+/* ── Chrome: topbar, pills, sidebar ────────────────────────────── */
+.shell .admin-topbar {
+  background: linear-gradient(180deg, rgba(255, 252, 246, .96), rgba(255, 250, 242, .88));
+  border-bottom: 1px solid rgba(184, 154, 82, .24);
+  box-shadow: 0 10px 26px -24px rgba(71, 16, 29, .5);
+  backdrop-filter: blur(10px);
+}
+.shell .role-chip {
+  background: #FFFDF9;
+  border-color: rgba(184, 154, 82, .32);
+  color: #7A6650;
+  box-shadow: inset 0 1px 0 #fff;
+}
+.shell .topbar-avatar {
+  background: linear-gradient(135deg, #E7CB84, #BB974A);
+  color: #3B2506;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .55),
+    0 0 0 3px rgba(214, 180, 92, .14);
+}
+.shell .sidebar {
+  border-right: 1px solid rgba(214, 180, 92, .32);
+  box-shadow: 12px 0 40px -30px rgba(71, 16, 29, .55);
+}
+.shell .sidebar-brand { border-bottom-color: rgba(214, 180, 92, .22); }
+.shell .sidebar a.active,
+.shell .sidebar .nav-group.active {
+  background: linear-gradient(90deg, rgba(214, 180, 92, .20), rgba(214, 180, 92, .04));
+  box-shadow:
+    inset 0 0 0 1px rgba(214, 180, 92, .28),
+    inset 0 1px 0 rgba(255, 255, 255, .08);
+  color: #F2D79F;
+  border-radius: 10px;
+}
+.shell .sidebar .nav-sub a.active {
+  background: rgba(214, 180, 92, .12);
+  box-shadow: inset 0 0 0 1px rgba(214, 180, 92, .16);
+  color: #F2D79F;
+}
+.shell .sidebar-user {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .03));
+  border-color: rgba(214, 180, 92, .28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .10),
+    0 10px 24px -18px rgba(0, 0, 0, .6);
+}
+
+/* ── Inventory tiles ───────────────────────────────────────────── */
+.shell .tile {
+  border: 1px solid var(--luxe-border);
+  border-radius: var(--luxe-radius);
+  background: var(--luxe-surface);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .9),
+    0 1px 2px rgba(71, 16, 29, .04),
+    0 10px 22px -18px rgba(71, 16, 29, .22);
+}
+.shell .tile:hover {
+  transform: translateY(-4px);
+  border-color: var(--luxe-border-strong);
+  box-shadow: var(--luxe-shadow-hover);
+}
+.shell .tile .pad { padding: 14px 16px 16px; }
+.shell .tile .pad strong { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
+.shell .tile img,
+.shell .tile .prod-img { background: #F0E7D8; }
+
+/* ── Badges & chips ────────────────────────────────────────────── */
+.shell .badge { border: 1px solid transparent; }
+.shell .badge.ok { background: #E8F3EA; border-color: rgba(38, 115, 77, .18); }
+.shell .badge.warn { background: #FCF2DA; border-color: rgba(148, 98, 0, .18); }
+.shell .badge.err { background: #FBE9E7; border-color: rgba(180, 35, 24, .18); }
+.shell .chip { background: #FBF3E5; border: 1px solid #EDE0CC; }
+
+/* ── HR surfaces ───────────────────────────────────────────────── */
+.shell .hr-card {
+  border-color: var(--luxe-border);
+  border-radius: var(--luxe-radius);
+  background: var(--luxe-surface);
+  box-shadow: var(--luxe-shadow);
+}
+.shell .hr-kpi {
+  border-color: var(--luxe-border);
+  border-radius: 14px;
+  background: var(--luxe-surface);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .9),
+    0 1px 2px rgba(71, 16, 29, .04),
+    0 10px 22px -18px rgba(71, 16, 29, .2);
+}
+.shell .hr-card-head,
+.shell .hr-card-foot {
+  background: linear-gradient(180deg, #FBF6EC 0%, #F8F1E4 100%);
+  border-color: #EEE3D2;
+}
+.shell .hr-card-head h2 { font-family: var(--font-display); font-size: 16px; font-weight: 600; letter-spacing: .1px; }
+.shell .hr-fieldset,
+.shell .hr-summary > div,
+.shell .hr-totals { background: #FBF7EF; border-color: #E9DDCB; }
+.shell .hr-segments { background: #F3EBDD; border-color: #E5D8C5; }
+.shell .hr-segment.active {
+  background: #FFFDF9;
+  color: var(--color-wine);
+  box-shadow:
+    0 1px 2px rgba(71, 16, 29, .10),
+    inset 0 1px 0 #fff;
+}
+.shell .hr-stat { background: #F3EBDD; }
+
+/* ── POS / billing surfaces ────────────────────────────────────── */
+.shell .pos-step {
+  border-radius: 12px;
+  background: var(--luxe-surface);
+  border-color: #E8DBC8;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 2px rgba(71, 16, 29, .04);
+}
+.shell .pos-step.active {
+  border-color: rgba(184, 154, 82, .55);
+  background: linear-gradient(180deg, #FBF3E4 0%, #F8EEDC 100%);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 4px 12px -8px rgba(184, 154, 82, .5);
+}
+.shell .pos-step.completed { background: #F4FAF6; border-color: rgba(38, 115, 77, .35); }
+.shell .pos-step-num { background: #F0E6D6; }
+.shell .pay-pill {
+  border-radius: 10px;
+  background: #FFFDF9;
+  border-color: #E5D8C5;
+  box-shadow: inset 0 1px 0 #fff;
+}
+.shell .pay-pill:hover { border-color: var(--luxe-border-strong); background: #FFFCF5; }
+.shell .pay-pill.selected {
+  border-color: var(--color-gold-deep);
+  background: linear-gradient(180deg, #FAF0DE 0%, #F6EAD4 100%);
+  color: #6B4C13;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 3px 10px -6px rgba(184, 154, 82, .55);
+}
+.shell .preset-chip {
+  border-radius: 8px;
+  background: #FFFDF9;
+  border-color: #E5D8C5;
+}
+.shell .preset-chip:hover,
+.shell .preset-chip.active {
+  background: #FBF3E5;
+  border-color: var(--color-gold-deep);
+  color: #6B4C13;
+}
+
+/* ── Rich-text composer ────────────────────────────────────────── */
+.shell .rt-editor { border-radius: 10px; background: #FFFDF9; border-color: #E5D8C5; }
+.shell .rt-toolbar { background: #FBF6EC; border-color: #EEE3D2; }
+.shell .rt-btn:hover { background: #FFFDF9; border-color: var(--luxe-border); }
+.shell .rt-area { background: #FFFDF9; }
+.shell .rt-area:focus { background: #FFFEFB; }
+.shell .rt-emoji {
+  background: #FFFDF9;
+  border-color: #E5D8C5;
+  box-shadow: 0 16px 40px -20px rgba(71, 16, 29, .35);
+}
+
+/* ── Loading, empty, feedback ──────────────────────────────────── */
+.shell .skeleton { background: linear-gradient(90deg, #F0E7D8, #FAF5EC, #F0E7D8); }
+.shell .empty { color: #8A7860; }
+.shell .toast {
+  background: linear-gradient(180deg, #5A1122 0%, #47101D 100%);
+  border: 1px solid rgba(214, 180, 92, .28);
+  box-shadow: 0 18px 40px -18px rgba(71, 16, 29, .55);
+}
+.shell .err-box { background: #FDF1EE; border-color: rgba(180, 35, 24, .45); box-shadow: inset 0 1px 0 #fff; }
+
 /* Label / receipt printing: labels only, no dashboard chrome. */
 @media print {
   .sidebar, .topbar, .admin-topbar, .sidebar-backdrop, .no-print { display: none !important; }
   .shell { display: block; }
-  .main { padding: 0; background: #fff; }
-  .card { box-shadow: none; border: none; padding: 0; }
+  .shell .main { padding: 0; background: #fff; }
+  .card, .shell .card, .shell .hr-card, .shell .tile { box-shadow: none; border: none; padding: 0; background: #fff; }
   .page { animation: none; }
+  .shell .page > h1::after { display: none; }
   .print-sheet { border: none !important; margin: 0 auto 4mm auto; }
 }
 

@@ -76,9 +76,9 @@ export default function AdminBreadcrumbs() {
         gap: 6,
         fontSize: 13,
         color: 'var(--color-muted)',
-        background: '#FFFFFF',
+        background: 'var(--color-surface)',
         padding: '6px 14px',
-        borderRadius: 8,
+        borderRadius: 9,
         border: '1px solid var(--color-border)',
       }}
     >

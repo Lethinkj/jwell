@@ -63,7 +63,7 @@ export default function InventoryReport() {
 
       <div className="grid kpi" style={{ marginTop: 12 }}>
         {[['Buying spend (period)', inr(totalSpend)], ['Pieces added', totalPieces], ['Avg cost / piece', totalPieces ? inr(totalSpend / totalPieces) : inr(0)]].map(([k, v]) => (
-          <div key={k} className="card"><small style={{ color: 'var(--color-muted)' }}>{k}</small><div style={{ fontSize: 22, fontWeight: 700 }}>{v}</div></div>))}
+          <div key={k} className="card"><small style={{ color: 'var(--color-muted)' }}>{k}</small><div className="kpi-value">{v}</div></div>))}
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', marginTop: 16 }}>

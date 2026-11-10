@@ -14,7 +14,7 @@ export default function Dashboard() {
     <div className="page">
       <h1 style={{ fontFamily: 'var(--font-display)', margin: '0 0 4px' }}>Overview</h1>
       <p style={{ color: 'var(--color-muted)', marginTop: 0 }}>Every KPI computed from committed records — same filters, same timezone.</p>
-      <div className="filters" style={{ maxWidth: 560 }}>{PRESETS.map(([v, l]) => <button key={v} className={`btn${preset === v ? ' gold' : ' ghost'}`} onClick={() => setPreset(v)}>{l}</button>)}</div>
+      <div className="preset-tabs" role="tablist" aria-label="Report period">{PRESETS.map(([v, l]) => <button key={v} role="tab" aria-selected={preset === v} className={`preset-tab${preset === v ? ' active' : ''}`} onClick={() => setPreset(v)}>{l}</button>)}</div>
       {isLoading ? <div className="grid kpi">{[1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ height: 90 }} />)}</div>
         : isError ? <div className="err-box">Could not load reports. Is the API running on :4000?</div>
         : <>

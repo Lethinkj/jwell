@@ -154,7 +154,7 @@ export default function EmailSettings() {
                     </div>
                     <details style={{ marginTop: 10 }}>
                       <summary style={{ cursor: 'pointer', color: 'var(--color-muted)', fontSize: 13 }}>Preview</summary>
-                      <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, padding: 12, marginTop: 8, background: '#fff', fontSize: 13 }}>
+                      <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, padding: 12, marginTop: 8, background: 'var(--color-surface)', fontSize: 13 }}>
                         <div style={{ fontWeight: 700, marginBottom: 6 }}>{substitute(tpl.subject, sampleVars)}</div>
                         <div style={{ color: 'var(--color-espresso)' }} dangerouslySetInnerHTML={{ __html: previewHtml }} />
                       </div>

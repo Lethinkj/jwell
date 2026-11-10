@@ -69,10 +69,10 @@ export default function CustomerExplorerModal({ onSelectCustomer, onClose }: Pro
           height: '88vh',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#fff',
-          borderRadius: 14,
+          backgroundColor: 'var(--color-card)',
+          borderRadius: 16,
           padding: 20,
-          boxShadow: '0 20px 45px rgba(71,16,29,0.3)',
+          boxShadow: 'var(--luxe-shadow)',
         }}
       >
         {/* Header */}
@@ -159,7 +159,7 @@ export default function CustomerExplorerModal({ onSelectCustomer, onClose }: Pro
               border: '1px solid var(--color-border)',
               borderRadius: 8,
               overflowY: 'auto',
-              background: '#fff',
+              background: 'var(--color-surface)',
               padding: 16,
               display: 'flex',
               flexDirection: 'column',

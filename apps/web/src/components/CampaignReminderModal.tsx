@@ -56,7 +56,7 @@ export default function CampaignReminderModal() {
       <div
         onClick={(e) => e.stopPropagation()}
         className="card"
-        style={{ background: '#FFFFFF', maxWidth: 620, width: '100%', maxHeight: '90vh', overflowY: 'auto', borderTop: '4px solid var(--color-gold-deep)' }}
+        style={{ background: 'var(--color-surface)', maxWidth: 620, width: '100%', maxHeight: '90vh', overflowY: 'auto', borderTop: '4px solid var(--color-gold-deep)' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
           <div>

@@ -43,8 +43,8 @@ export default function ProductDetailModal({ productId, onClose }: Props) {
         className="card"
         style={{
           width: '100%', maxWidth: 900, maxHeight: '90vh', overflowY: 'auto',
-          backgroundColor: '#fff', borderRadius: 14, padding: 20,
-          boxShadow: '0 20px 45px rgba(71,16,29,0.3)',
+          backgroundColor: 'var(--color-card)', borderRadius: 16, padding: 20,
+          boxShadow: 'var(--luxe-shadow)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>

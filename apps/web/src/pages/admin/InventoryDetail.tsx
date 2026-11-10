@@ -80,7 +80,7 @@ export default function InventoryDetail() {
                   <div style={{ marginTop: 8, textAlign: 'center' }}>
                     {barcodePreview && (
                       <img src={barcodePreview} alt={activeBarcode.barcode_value}
-                        style={{ maxWidth: '100%', border: '1px solid var(--color-border)', borderRadius: 6, background: '#fff' }} />
+                        style={{ maxWidth: '100%', border: '1px solid var(--color-border)', borderRadius: 6, background: 'var(--color-surface)' }} />
                     )}
                     <div style={{ marginTop: 4, letterSpacing: 1, fontWeight: 600 }}>{activeBarcode.barcode_value}</div>
                     <button className="btn gold" style={{ marginTop: 8 }}
@@ -142,7 +142,7 @@ export default function InventoryDetail() {
             ) : (
               <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {sales.map((s: any) => (
-                  <div key={s.sale_item_id} style={{ border: '1px solid var(--color-border)', borderRadius: 8, padding: 12, background: '#FFFFFF' }}>
+                  <div key={s.sale_item_id} style={{ border: '1px solid var(--color-border)', borderRadius: 8, padding: 12, background: 'var(--color-surface)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <div>
                         <strong>{s.invoice_no}</strong>

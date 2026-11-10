@@ -62,10 +62,10 @@ export default function InvoiceModal({ saleId, initialSale, onClose }: Props) {
           maxWidth: 820,
           maxHeight: '92vh',
           overflowY: 'auto',
-          backgroundColor: '#fff',
-          borderRadius: 14,
+          backgroundColor: 'var(--color-card)',
+          borderRadius: 16,
           padding: 24,
-          boxShadow: '0 20px 45px rgba(71,16,29,0.35)',
+          boxShadow: 'var(--luxe-shadow)',
           position: 'relative',
         }}
       >

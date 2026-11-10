@@ -146,10 +146,10 @@ export default function ManualPieceModal({ defaultRate24k = 8000, onAddPiece, on
           maxWidth: 680,
           maxHeight: '92vh',
           overflowY: 'auto',
-          backgroundColor: '#fff',
-          borderRadius: 14,
+          backgroundColor: 'var(--color-card)',
+          borderRadius: 16,
           padding: 22,
-          boxShadow: '0 20px 45px rgba(71,16,29,0.3)',
+          boxShadow: 'var(--luxe-shadow)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, borderBottom: '1px solid var(--color-border)', paddingBottom: 10 }}>

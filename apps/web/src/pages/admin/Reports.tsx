@@ -47,7 +47,7 @@ export default function Reports() {
         <button className="btn ghost" style={{ padding: '6px 14px' }} onClick={csv}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><Icon paths={ICONS.receipt} size={14} />Export CSV</span></button>
       </div>
       <p style={{ color: 'var(--color-muted)' }}>Today / Week / Month / 3M / 6M / 1Y share one definition with the dashboard.</p>
-      <div className="filters" style={{ maxWidth: 560 }}>{PRESETS.map(([v, l]) => <button key={v} className={`btn${preset === v ? ' gold' : ' ghost'}`} onClick={() => setPreset(v)}>{l}</button>)}</div>
+      <div className="preset-tabs" role="tablist" aria-label="Report period">{PRESETS.map(([v, l]) => <button key={v} role="tab" aria-selected={preset === v} className={`preset-tab${preset === v ? ' active' : ''}`} onClick={() => setPreset(v)}>{l}</button>)}</div>
       <div className="grid kpi" style={{ marginTop: 4 }}>
         {sales.isLoading
           ? [1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="skeleton" style={{ height: 90 }} />)

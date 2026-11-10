@@ -269,7 +269,7 @@ export default function Campaigns() {
 
       {editing && (
         <div onClick={() => setEditing(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(71,16,29,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={(e) => e.stopPropagation()} className="card" style={{ background: '#FFFFFF', maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto', borderTop: '4px solid var(--color-gold-deep)' }}>
+          <div onClick={(e) => e.stopPropagation()} className="card" style={{ background: 'var(--color-surface)', maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto', borderTop: '4px solid var(--color-gold-deep)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0 }}>Edit campaign</h3>
               <button className="btn ghost" onClick={() => setEditing(null)}>✕</button>

@@ -61,7 +61,7 @@ export default function Rates() {
               <span className="kpi-ico" style={{ background: `${k.tint}14`, color: k.tint }}><Icon paths={k.icon} size={16} /></span>
               <small>{k.label}</small>
             </div>
-            <div className="kpi-value">{k.value}</div>
+            <div className={`kpi-value${k.value.length > 16 ? ' kpi-value-xs' : k.value.length > 12 ? ' kpi-value-sm' : ''}`}>{k.value}</div>
             {k.sub && <small style={{ color: 'var(--color-muted)', marginTop: -4 }}>{k.sub}</small>}
           </div>
         ))}
