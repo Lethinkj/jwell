@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../../lib/api';
+import Modal from '../../../components/Modal';
 import { ICONS } from '../../../components/icons';
 import HrShell, { KPI_TINTS, useHrOverview } from './HrShell';
 
@@ -34,6 +35,7 @@ export default function HREmployees() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [deptName, setDeptName] = useState('');
   const [desigName, setDesigName] = useState('');
+  const [showForm, setShowForm] = useState(false);
 
   const list = useQuery({
     queryKey: ['hr-employees', status, q],
@@ -68,9 +70,6 @@ export default function HREmployees() {
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const reset = () => { setEditId(null); setForm({ ...EMPTY }); };
 
-  const scrollToForm = () =>
-    document.getElementById('employee-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
   const submit = async () => {
     const payload: any = { ...form };
     for (const k of ['department_id', 'designation_id', 'branch_id']) if (!payload[k]) payload[k] = null;
@@ -78,7 +77,7 @@ export default function HREmployees() {
       () => (editId ? api.patch(`/hr/employees/${editId}`, payload) : api.post('/hr/employees', payload)),
       editId ? 'Employee updated.' : 'Employee added.',
     );
-    if (done) reset();
+    if (done) { reset(); setShowForm(false); }
   };
 
   const startEdit = (e: Employee) => {
@@ -91,7 +90,7 @@ export default function HREmployees() {
       branch_id: e.branch_id || '', pan: e.pan || '', bank_account: e.bank_account || '',
       bank_ifsc: e.bank_ifsc || '',
     });
-    scrollToForm();
+    setShowForm(true);
   };
 
   const markExited = (e: Employee) => {
@@ -139,7 +138,7 @@ export default function HREmployees() {
         { label: 'On notice', value: countOf('notice'), meta: 'serving notice period', icon: ICONS.calendar, ...KPI_TINTS.amber },
         { label: 'Exited', value: countOf('exited'), meta: 'records retained', icon: ICONS.audit, ...KPI_TINTS.rose },
       ]}
-      actions={<button className="btn gold" onClick={() => { reset(); scrollToForm(); }}>Add employee</button>}
+      actions={<button className="btn gold" onClick={() => { reset(); setShowForm(true); }}>Add employee</button>}
     >
       {msg && <div className={`hr-msg${msg.ok ? '' : ' err'}`}>{msg.text}</div>}
 
@@ -209,64 +208,6 @@ export default function HREmployees() {
         </div>
       </div>
 
-      <div className="hr-grid-main">
-        <div className="hr-card" id="employee-form">
-          <div className="hr-card-head">
-            <h2>{editId ? 'Edit employee' : 'Add employee'}</h2>
-            {editId && <span className="sub">Editing {form.full_name || form.emp_code}</span>}
-            <div className="hr-card-actions">
-              {editId && <button className="btn ghost sm" onClick={reset}>Cancel edit</button>}
-            </div>
-          </div>
-          <div className="hr-card-body">
-            <form onSubmit={(e) => { e.preventDefault(); submit(); }}>
-              <fieldset className="hr-fieldset">
-                <legend>Basic details</legend>
-                <div className="hr-form-grid">
-                  {textField('emp_code', 'Employee code *')}
-                  {textField('full_name', 'Full name *')}
-                  {textField('phone', 'Phone')}
-                  {textField('email', 'Email', 'email')}
-                  {textField('dob', 'Date of birth', 'date')}
-                  {selectField('gender', 'Gender', GENDERS)}
-                </div>
-              </fieldset>
-
-              <fieldset className="hr-fieldset">
-                <legend>Employment</legend>
-                <div className="hr-form-grid">
-                  {textField('joining_date', 'Joining date *', 'date')}
-                  {selectField('employment_type', 'Employment type', EMPLOYMENT_TYPES)}
-                  {selectField('status', 'Status', STATUSES)}
-                  {selectField('department_id', 'Department', [['', '—'], ...departments.map((d) => [d.id, d.name] as [string, string])])}
-                  {selectField('designation_id', 'Designation', [['', '—'], ...designations.map((d) => [d.id, d.name] as [string, string])])}
-                  {selectField('branch_id', 'Branch / showroom', [['', '—'], ...branchList.map((b) => [b.id, b.name] as [string, string])])}
-                </div>
-              </fieldset>
-
-              <fieldset className="hr-fieldset">
-                <legend>Statutory &amp; bank</legend>
-                <div className="hr-form-grid">
-                  {textField('pan', 'PAN')}
-                  {textField('bank_account', 'Bank account')}
-                  {textField('bank_ifsc', 'IFSC')}
-                </div>
-              </fieldset>
-
-              <div className="hr-form-actions">
-                <button
-                  type="submit"
-                  className="btn gold"
-                  disabled={!form.emp_code || !form.full_name || !form.joining_date}
-                >
-                  {editId ? 'Save changes' : 'Add employee'}
-                </button>
-                {editId && <button type="button" className="btn ghost" onClick={reset}>Cancel</button>}
-              </div>
-            </form>
-          </div>
-        </div>
-
         <div className="hr-card">
           <div className="hr-card-head">
             <h2>Departments &amp; designations</h2>
@@ -320,7 +261,64 @@ export default function HREmployees() {
             </p>
           </div>
         </div>
-      </div>
+      {showForm && (
+        <Modal
+          title={editId ? 'Edit employee' : 'Add employee'}
+          subtitle={editId ? `Editing ${form.full_name || form.emp_code}` : 'Employee records are separate from login accounts.'}
+          onClose={() => { setShowForm(false); reset(); }}
+          size="lg"
+          footer={
+            <>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => { setShowForm(false); reset(); }}>Cancel</button>
+              <button
+                type="submit"
+                form="employee-form"
+                className="btn gold"
+                disabled={!form.emp_code || !form.full_name || !form.joining_date}
+              >
+                {editId ? 'Save changes' : 'Add employee'}
+              </button>
+            </>
+          }
+        >
+          {msg && !msg.ok && <div className="err-box" style={{ marginBottom: 12 }}>{msg.text}</div>}
+          <form id="employee-form" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+            <fieldset className="hr-fieldset">
+              <legend>Basic details</legend>
+              <div className="hr-form-grid">
+                {textField('emp_code', 'Employee code *')}
+                {textField('full_name', 'Full name *')}
+                {textField('phone', 'Phone')}
+                {textField('email', 'Email', 'email')}
+                {textField('dob', 'Date of birth', 'date')}
+                {selectField('gender', 'Gender', GENDERS)}
+              </div>
+            </fieldset>
+
+            <fieldset className="hr-fieldset">
+              <legend>Employment</legend>
+              <div className="hr-form-grid">
+                {textField('joining_date', 'Joining date *', 'date')}
+                {selectField('employment_type', 'Employment type', EMPLOYMENT_TYPES)}
+                {selectField('status', 'Status', STATUSES)}
+                {selectField('department_id', 'Department', [['', '—'], ...departments.map((d) => [d.id, d.name] as [string, string])])}
+                {selectField('designation_id', 'Designation', [['', '—'], ...designations.map((d) => [d.id, d.name] as [string, string])])}
+                {selectField('branch_id', 'Branch / showroom', [['', '—'], ...branchList.map((b) => [b.id, b.name] as [string, string])])}
+              </div>
+            </fieldset>
+
+            <fieldset className="hr-fieldset">
+              <legend>Statutory &amp; bank</legend>
+              <div className="hr-form-grid">
+                {textField('pan', 'PAN')}
+                {textField('bank_account', 'Bank account')}
+                {textField('bank_ifsc', 'IFSC')}
+              </div>
+            </fieldset>
+          </form>
+        </Modal>
+      )}
     </HrShell>
   );
 }

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, Legend, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { api, inr } from '../../lib/api';
 import { Icon, ICONS } from '../../components/icons';
+import CategorySalesModal from '../../components/CategorySalesModal';
 
 const GOLD = '#D6B45C';
 const GOLD_DEEP = '#B89A52';
@@ -11,6 +12,7 @@ const PRESETS: Array<[string, string]> = [['today', 'Today'], ['week', 'Week'], 
 
 export default function Reports() {
   const [preset, setPreset] = useState('month');
+  const [catDrill, setCatDrill] = useState<string | null>(null);
   const sales = useQuery({ queryKey: ['r-sales', preset], queryFn: () => api.get(`/reports/sales?preset=${preset}`) });
   const inv = useQuery({ queryKey: ['r-inv'], queryFn: () => api.get('/reports/inventory') });
   const cus = useQuery({ queryKey: ['r-cus', preset], queryFn: () => api.get(`/reports/customers?preset=${preset}`) });
@@ -104,6 +106,7 @@ export default function Reports() {
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', marginTop: 16 }}>
         <div className="card">
           <strong>Category sales</strong>
+          <div style={{ fontSize: 12.5, color: 'var(--color-muted)', marginTop: 2 }}>Click a bar to see every piece sold in that category, with its buyer.</div>
           <div style={{ height: 230, marginTop: 8 }}>
             {byCat.length ? (
               <ResponsiveContainer>
@@ -112,7 +115,16 @@ export default function Reports() {
                   <XAxis dataKey="x" fontSize={11} tickMargin={6} interval={0} height={46} angle={-18} textAnchor="end" />
                   <YAxis fontSize={11} tickFormatter={(v: number) => `₹${Number(v).toLocaleString('en-IN')}`} width={70} />
                   <Tooltip formatter={(v: any) => inr(Number(v))} contentStyle={tooltipStyle} cursor={{ fill: 'rgba(214,180,92,.08)' }} />
-                  <Bar dataKey="revenue" fill={GOLD} radius={[6, 6, 0, 0]} />
+                  <Bar
+                    dataKey="revenue"
+                    fill={GOLD}
+                    radius={[6, 6, 0, 0]}
+                    cursor="pointer"
+                    onClick={(entry: any) => {
+                      const category = entry?.x ?? entry?.payload?.x;
+                      if (category) setCatDrill(String(category));
+                    }}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : <div className="empty">No category sales in this period</div>}
@@ -156,6 +168,10 @@ export default function Reports() {
           </div>
         </div>
       </div>
+
+      {catDrill && (
+        <CategorySalesModal category={catDrill} preset={preset} onClose={() => setCatDrill(null)} />
+      )}
     </div>
   );
 }

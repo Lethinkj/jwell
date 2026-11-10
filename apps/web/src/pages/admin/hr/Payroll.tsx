@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { api, inr } from '../../../lib/api';
 import { downloadPayslipPdf } from '../../../lib/payslipPdf';
 import { ICONS } from '../../../components/icons';
+import Modal from '../../../components/Modal';
 import HrShell, { KPI_TINTS, monthName, useHrOverview } from './HrShell';
 
 type Employee = { id: string; emp_code: string; full_name: string; status: string };
@@ -45,6 +46,8 @@ export default function HRPayroll() {
   const [selected, setSelected] = useState<string>('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [salaryForm, setSalaryForm] = useState({ employee_id: '', effective_from: dayNow(), ...EMPTY_SALARY });
+  const [showGenerate, setShowGenerate] = useState(false);
+  const [showSalary, setShowSalary] = useState(false);
 
   const employees = useQuery({ queryKey: ['hr-employees-all'], queryFn: () => api.get('/hr/employees?status=all') });
   const salaries = useQuery({ queryKey: ['hr-salaries'], queryFn: () => api.get('/hr/salary') });
@@ -92,6 +95,7 @@ export default function HRPayroll() {
       setSelected(r.data.id);
       const skipped = r.data.skipped?.length || 0;
       setMsg({ ok: true, text: `Draft generated for ${period}.${skipped ? ` ${skipped} employee(s) skipped (no salary structure).` : ''}` });
+      setShowGenerate(false);
       await runs.refetch();
     } catch (e: any) {
       setMsg({ ok: false, text: e.message || 'Could not generate payroll' });
@@ -132,7 +136,7 @@ export default function HRPayroll() {
     const payload: any = { ...salaryForm };
     for (const [k] of COMPONENTS) payload[k] = Number(salaryForm[k]) || 0;
     const ok = await act(() => api.post('/hr/salary', payload), 'Salary structure saved.');
-    if (ok) await salaries.refetch();
+    if (ok) { setShowSalary(false); await salaries.refetch(); }
   };
 
   const download = async (slipId: string) => {
@@ -168,95 +172,14 @@ export default function HRPayroll() {
         },
         { label: 'Salary structures', value: String(salaryRows.length), meta: 'revisions on record', icon: ICONS.calculator, ...KPI_TINTS.rose },
       ]}
+      actions={
+        <>
+          <button className="btn gold" onClick={() => { setMsg(null); setShowGenerate(true); }}>Run payroll</button>
+          <button className="btn ghost" onClick={() => { setMsg(null); setShowSalary(true); }}>+ Salary structure</button>
+        </>
+      }
     >
       {msg && <div className={`hr-msg${msg.ok ? '' : ' err'}`}>{msg.text}</div>}
-
-      <div className="hr-grid-main">
-        <div className="hr-card">
-          <div className="hr-card-head">
-            <h2>Run monthly payroll</h2>
-            <span className="sub">1st – last day of month</span>
-          </div>
-          <div className="hr-card-body">
-            <form onSubmit={(e) => { e.preventDefault(); generate(); }}>
-              <div className="hr-form-grid">
-                <div className="hr-field">
-                  <label className="lbl" htmlFor="pr-period">Period</label>
-                  <input id="pr-period" type="month" value={period} onChange={(e) => onPeriod(e.target.value)} />
-                </div>
-                <div className="hr-field">
-                  <label className="lbl" htmlFor="pr-days">Working days</label>
-                  <input id="pr-days" type="number" min={1} value={workingDays} onChange={(e) => setWorkingDays(e.target.value)} />
-                </div>
-              </div>
-              <div className="hr-form-actions">
-                <button type="submit" className="btn gold" disabled={!period}>Generate / refresh draft</button>
-              </div>
-            </form>
-            <p style={{ color: 'var(--color-muted)', fontSize: 12, marginTop: 12, marginBottom: 0, lineHeight: 1.6 }}>
-              Re-running a draft replaces its payslips. Locked and paid runs are immutable.
-            </p>
-          </div>
-        </div>
-
-        <div className="hr-card">
-          <div className="hr-card-head">
-            <h2>Salary structure</h2>
-            <span className="sub">Latest revision wins</span>
-          </div>
-          <div className="hr-card-body">
-            <div className="hr-form-grid">
-              <div className="hr-field">
-                <label className="lbl" htmlFor="sal-employee">Employee</label>
-                <select id="sal-employee" value={salaryForm.employee_id} onChange={(e) => pickEmployee(e.target.value)}>
-                  <option value="">Select employee</option>
-                  {staff.map((e) => <option key={e.id} value={e.id}>{e.emp_code} · {e.full_name}</option>)}
-                </select>
-              </div>
-              <div className="hr-field">
-                <label className="lbl" htmlFor="sal-effective">Effective from</label>
-                <input id="sal-effective" type="date" value={salaryForm.effective_from} onChange={(e) => setSalaryForm({ ...salaryForm, effective_from: e.target.value })} />
-              </div>
-            </div>
-
-            <fieldset className="hr-fieldset" style={{ marginTop: 14 }}>
-              <legend>Earnings</legend>
-              <div className="hr-form-grid">
-                {EARNINGS.map(([k, label]) => (
-                  <div className="hr-field" key={k}>
-                    <label className="lbl" htmlFor={`sal-${k}`}>{label} (₹)</label>
-                    <input id={`sal-${k}`} type="number" min={0} value={salaryForm[k]} onChange={(e) => setSalaryForm({ ...salaryForm, [k]: e.target.value })} />
-                  </div>
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset className="hr-fieldset">
-              <legend>Deductions</legend>
-              <div className="hr-form-grid">
-                {DEDUCTIONS.map(([k, label]) => (
-                  <div className="hr-field" key={k}>
-                    <label className="lbl" htmlFor={`sal-${k}`}>{label} (₹)</label>
-                    <input id={`sal-${k}`} type="number" min={0} value={salaryForm[k]} onChange={(e) => setSalaryForm({ ...salaryForm, [k]: e.target.value })} />
-                  </div>
-                ))}
-              </div>
-            </fieldset>
-
-            <div className="hr-totals">
-              <span>Gross <strong>{inr(gross)}</strong></span>
-              <span>Deductions <strong>{inr(deductions)}</strong></span>
-              <span>Net <strong>{inr(net)}</strong></span>
-            </div>
-            <div className="hr-form-actions">
-              <button className="btn gold" onClick={saveSalary} disabled={!salaryForm.employee_id}>Save structure</button>
-            </div>
-            <p style={{ color: 'var(--color-muted)', fontSize: 12, marginTop: 10, marginBottom: 0, lineHeight: 1.6 }}>
-              PF / ESI / PT / TDS are example components — enter the amounts that apply. They are not auto-calculated.
-            </p>
-          </div>
-        </div>
-      </div>
 
       <div className="hr-card">
         <div className="hr-card-head">
@@ -358,6 +281,94 @@ export default function HRPayroll() {
           </table>
         </div>
       </div>
+      {showGenerate && (
+        <Modal
+          title="Run monthly payroll"
+          subtitle="Generates a draft for 1st – last day of the month. Re-running a draft replaces its payslips."
+          onClose={() => setShowGenerate(false)}
+          size="sm"
+          footer={
+            <>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => setShowGenerate(false)}>Cancel</button>
+              <button type="submit" form="payroll-form" className="btn gold" disabled={!period}>Generate / refresh draft</button>
+            </>
+          }
+        >
+          {msg && !msg.ok && <div className="err-box" style={{ marginBottom: 12 }}>{msg.text}</div>}
+          <form id="payroll-form" onSubmit={(e) => { e.preventDefault(); generate(); }}>
+            <label className="lbl" htmlFor="pr-period">Period</label>
+            <input id="pr-period" type="month" value={period} onChange={(e) => onPeriod(e.target.value)} />
+            <label className="lbl" htmlFor="pr-days">Working days</label>
+            <input id="pr-days" type="number" min={1} value={workingDays} onChange={(e) => setWorkingDays(e.target.value)} />
+            <p className="modal-hint" style={{ marginTop: 12 }}>Locked and paid runs are immutable.</p>
+          </form>
+        </Modal>
+      )}
+
+      {showSalary && (
+        <Modal
+          title="Salary structure"
+          subtitle="The latest revision effective in the payroll month wins."
+          onClose={() => setShowSalary(false)}
+          size="lg"
+          footer={
+            <>
+              <span className="modal-hint">PF / ESI / PT / TDS are entered manually.</span>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => setShowSalary(false)}>Cancel</button>
+              <button type="submit" form="salary-form" className="btn gold" disabled={!salaryForm.employee_id}>Save structure</button>
+            </>
+          }
+        >
+          {msg && !msg.ok && <div className="err-box" style={{ marginBottom: 12 }}>{msg.text}</div>}
+          <form id="salary-form" onSubmit={(e) => { e.preventDefault(); saveSalary(); }}>
+            <div className="hr-form-grid">
+              <div className="hr-field">
+                <label className="lbl" htmlFor="sal-employee">Employee</label>
+                <select id="sal-employee" value={salaryForm.employee_id} onChange={(e) => pickEmployee(e.target.value)}>
+                  <option value="">Select employee</option>
+                  {staff.map((e) => <option key={e.id} value={e.id}>{e.emp_code} · {e.full_name}</option>)}
+                </select>
+              </div>
+              <div className="hr-field">
+                <label className="lbl" htmlFor="sal-effective">Effective from</label>
+                <input id="sal-effective" type="date" value={salaryForm.effective_from} onChange={(e) => setSalaryForm({ ...salaryForm, effective_from: e.target.value })} />
+              </div>
+            </div>
+
+            <fieldset className="hr-fieldset" style={{ marginTop: 14 }}>
+              <legend>Earnings</legend>
+              <div className="hr-form-grid">
+                {EARNINGS.map(([k, label]) => (
+                  <div className="hr-field" key={k}>
+                    <label className="lbl" htmlFor={`sal-${k}`}>{label} (₹)</label>
+                    <input id={`sal-${k}`} type="number" min={0} value={salaryForm[k]} onChange={(e) => setSalaryForm({ ...salaryForm, [k]: e.target.value })} />
+                  </div>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset className="hr-fieldset">
+              <legend>Deductions</legend>
+              <div className="hr-form-grid">
+                {DEDUCTIONS.map(([k, label]) => (
+                  <div className="hr-field" key={k}>
+                    <label className="lbl" htmlFor={`sal-${k}`}>{label} (₹)</label>
+                    <input id={`sal-${k}`} type="number" min={0} value={salaryForm[k]} onChange={(e) => setSalaryForm({ ...salaryForm, [k]: e.target.value })} />
+                  </div>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="hr-totals">
+              <span>Gross <strong>{inr(gross)}</strong></span>
+              <span>Deductions <strong>{inr(deductions)}</strong></span>
+              <span>Net <strong>{inr(net)}</strong></span>
+            </div>
+          </form>
+        </Modal>
+      )}
     </HrShell>
   );
 }

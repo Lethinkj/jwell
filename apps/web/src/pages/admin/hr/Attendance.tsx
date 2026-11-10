@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../../lib/api';
+import Modal from '../../../components/Modal';
 import { ICONS } from '../../../components/icons';
 import HrShell, { KPI_TINTS, monthName } from './HrShell';
 
@@ -32,6 +33,8 @@ export default function HRAttendance() {
   });
   const [csv, setCsv] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [showMark, setShowMark] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   const employees = useQuery({ queryKey: ['hr-employees-all'], queryFn: () => api.get('/hr/employees?status=all') });
   const list = useQuery({
@@ -58,6 +61,7 @@ export default function HRAttendance() {
         overtime_minutes: Number(form.overtime_minutes) || 0, note: form.note || null,
       });
       setMsg({ ok: true, text: 'Attendance saved.' });
+      setShowMark(false);
       await list.refetch();
     } catch (e: any) {
       setMsg({ ok: false, text: e.message || 'Could not save attendance' });
@@ -83,6 +87,7 @@ export default function HRAttendance() {
       const d = r.data;
       const hint = d.errors?.length ? ` First error: ${d.errors[0].error}` : '';
       setMsg({ ok: d.failed === 0, text: `${d.imported} imported, ${d.failed} failed.${hint}` });
+      if (d.failed === 0) setShowImport(false);
       await list.refetch();
     } catch (e: any) {
       setMsg({ ok: false, text: e.message || 'Import failed' });
@@ -99,86 +104,15 @@ export default function HRAttendance() {
         { label: 'Absent', value: String(counts.absent || 0), meta: 'marked absent', icon: ICONS.audit, ...KPI_TINTS.red },
         { label: 'Overtime', value: hhmm(overtimeTotal), meta: 'logged this month', icon: ICONS.trending, ...KPI_TINTS.blue },
       ]}
-      actions={<button className="btn ghost" onClick={() => list.refetch()}>Refresh register</button>}
+      actions={
+        <>
+          <button className="btn gold" onClick={() => { setMsg(null); setShowMark(true); }}>+ Mark attendance</button>
+          <button className="btn ghost" onClick={() => { setMsg(null); setShowImport(true); }}>Import CSV</button>
+          <button className="btn ghost" onClick={() => list.refetch()}>Refresh</button>
+        </>
+      }
     >
       {msg && <div className={`hr-msg${msg.ok ? '' : ' err'}`}>{msg.text}</div>}
-
-      <div className="hr-grid-main">
-        <div className="hr-card">
-          <div className="hr-card-head">
-            <h2>Mark attendance</h2>
-            <span className="sub">Manual entry</span>
-          </div>
-          <div className="hr-card-body">
-            <form onSubmit={(e) => { e.preventDefault(); mark(); }}>
-              <div className="hr-form-grid">
-                <div className="hr-field span-2">
-                  <label className="lbl" htmlFor="att-employee">Employee</label>
-                  <select id="att-employee" value={form.employee_id} onChange={(e) => set('employee_id', e.target.value)}>
-                    <option value="">Select employee</option>
-                    {staff.map((e) => <option key={e.id} value={e.id}>{e.emp_code} · {e.full_name}</option>)}
-                  </select>
-                </div>
-                <div className="hr-field">
-                  <label className="lbl" htmlFor="att-date">Date</label>
-                  <input id="att-date" type="date" value={form.work_date} onChange={(e) => set('work_date', e.target.value)} />
-                </div>
-                <div className="hr-field">
-                  <label className="lbl" htmlFor="att-status">Status</label>
-                  <select id="att-status" value={form.status} onChange={(e) => set('status', e.target.value)}>
-                    {STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                </div>
-                <div className="hr-field">
-                  <label className="lbl" htmlFor="att-in">Check in</label>
-                  <input id="att-in" type="time" value={form.check_in} onChange={(e) => set('check_in', e.target.value)} />
-                </div>
-                <div className="hr-field">
-                  <label className="lbl" htmlFor="att-out">Check out</label>
-                  <input id="att-out" type="time" value={form.check_out} onChange={(e) => set('check_out', e.target.value)} />
-                </div>
-                <div className="hr-field">
-                  <label className="lbl" htmlFor="att-ot">Overtime (minutes)</label>
-                  <input id="att-ot" type="number" min={0} value={form.overtime_minutes} onChange={(e) => set('overtime_minutes', e.target.value)} />
-                </div>
-                <div className="hr-field span-2">
-                  <label className="lbl" htmlFor="att-note">Note</label>
-                  <input id="att-note" value={form.note} onChange={(e) => set('note', e.target.value)} placeholder="Optional" />
-                </div>
-              </div>
-              <div className="hr-form-actions">
-                <button type="submit" className="btn gold" disabled={!form.employee_id}>Save attendance</button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <div className="hr-card">
-          <div className="hr-card-head">
-            <h2>Biometric / CSV import</h2>
-            <span className="sub">Bulk upsert</span>
-          </div>
-          <div className="hr-card-body">
-            <p style={{ color: 'var(--color-muted)', fontSize: 13, marginTop: 0, lineHeight: 1.6 }}>
-              One row per line: <code>emp_code,date,check_in,check_out,status</code>. Times are 24h HH:MM; status defaults to present.
-            </p>
-            <textarea
-              rows={9}
-              value={csv}
-              onChange={(e) => setCsv(e.target.value)}
-              style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12.5, lineHeight: 1.6 }}
-              placeholder={'EMP001,2026-11-01,10:02,19:11,present\nEMP002,2026-11-01,10:15,19:05,present'}
-            />
-            <div className="hr-form-actions">
-              <button className="btn gold" onClick={importRows} disabled={!csv.trim()}>Import rows</button>
-              {csv.trim() && <button className="btn ghost" onClick={() => setCsv('')}>Clear</button>}
-            </div>
-            <p style={{ color: 'var(--color-muted)', fontSize: 12, marginTop: 12, marginBottom: 0, lineHeight: 1.6 }}>
-              Imported rows are marked with source <strong>biometric</strong> so they are easy to audit.
-            </p>
-          </div>
-        </div>
-      </div>
 
       <div className="hr-card">
         <div className="hr-card-head">
@@ -222,6 +156,90 @@ export default function HRAttendance() {
           </table>
         </div>
       </div>
+      {showMark && (
+        <Modal
+          title="Mark attendance"
+          subtitle="One record per employee per day — saving again updates the day."
+          onClose={() => setShowMark(false)}
+          size="md"
+          footer={
+            <>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => setShowMark(false)}>Cancel</button>
+              <button type="submit" form="attendance-form" className="btn gold" disabled={!form.employee_id}>Save attendance</button>
+            </>
+          }
+        >
+          {msg && !msg.ok && <div className="err-box" style={{ marginBottom: 12 }}>{msg.text}</div>}
+          <form id="attendance-form" onSubmit={(e) => { e.preventDefault(); mark(); }}>
+            <div className="hr-form-grid">
+              <div className="hr-field span-2">
+                <label className="lbl" htmlFor="att-employee">Employee</label>
+                <select id="att-employee" value={form.employee_id} onChange={(e) => set('employee_id', e.target.value)}>
+                  <option value="">Select employee</option>
+                  {staff.map((e) => <option key={e.id} value={e.id}>{e.emp_code} · {e.full_name}</option>)}
+                </select>
+              </div>
+              <div className="hr-field">
+                <label className="lbl" htmlFor="att-date">Date</label>
+                <input id="att-date" type="date" value={form.work_date} onChange={(e) => set('work_date', e.target.value)} />
+              </div>
+              <div className="hr-field">
+                <label className="lbl" htmlFor="att-status">Status</label>
+                <select id="att-status" value={form.status} onChange={(e) => set('status', e.target.value)}>
+                  {STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </div>
+              <div className="hr-field">
+                <label className="lbl" htmlFor="att-in">Check in</label>
+                <input id="att-in" type="time" value={form.check_in} onChange={(e) => set('check_in', e.target.value)} />
+              </div>
+              <div className="hr-field">
+                <label className="lbl" htmlFor="att-out">Check out</label>
+                <input id="att-out" type="time" value={form.check_out} onChange={(e) => set('check_out', e.target.value)} />
+              </div>
+              <div className="hr-field">
+                <label className="lbl" htmlFor="att-ot">Overtime (minutes)</label>
+                <input id="att-ot" type="number" min={0} value={form.overtime_minutes} onChange={(e) => set('overtime_minutes', e.target.value)} />
+              </div>
+              <div className="hr-field span-2">
+                <label className="lbl" htmlFor="att-note">Note</label>
+                <input id="att-note" value={form.note} onChange={(e) => set('note', e.target.value)} placeholder="Optional" />
+              </div>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {showImport && (
+        <Modal
+          title="Biometric / CSV import"
+          subtitle="Bulk upsert attendance for many employees at once."
+          onClose={() => setShowImport(false)}
+          size="md"
+          footer={
+            <>
+              <span className="modal-hint">Imported rows are marked source biometric.</span>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => setShowImport(false)}>Cancel</button>
+              <button type="button" className="btn gold" onClick={importRows} disabled={!csv.trim()}>Import rows</button>
+            </>
+          }
+        >
+          {msg && !msg.ok && <div className="err-box" style={{ marginBottom: 12 }}>{msg.text}</div>}
+          <p style={{ color: 'var(--color-muted)', fontSize: 13, marginTop: 0, lineHeight: 1.6 }}>
+            One row per line: <code>emp_code,date,check_in,check_out,status</code>. Times are 24h HH:MM; status defaults to present.
+          </p>
+          <textarea
+            rows={9}
+            value={csv}
+            onChange={(e) => setCsv(e.target.value)}
+            style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12.5, lineHeight: 1.6 }}
+            placeholder={'EMP001,2026-11-01,10:02,19:11,present\nEMP002,2026-11-01,10:15,19:05,present'}
+          />
+          {csv.trim() && <button type="button" className="btn ghost sm" style={{ marginTop: 8 }} onClick={() => setCsv('')}>Clear</button>}
+        </Modal>
+      )}
     </HrShell>
   );
 }

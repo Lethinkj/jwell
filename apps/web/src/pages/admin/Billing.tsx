@@ -6,6 +6,9 @@ import ScannerModal from '../../components/ScannerModal';
 import ManualPieceModal from '../../components/ManualPieceModal';
 import InvoiceModal from '../../components/InvoiceModal';
 import CustomerExplorerModal from '../../components/CustomerExplorerModal';
+import ProductSearchModal from '../../components/ProductSearchModal';
+import Modal from '../../components/Modal';
+import { Icon, ICONS } from '../../components/icons';
 import { downloadInvoicePdf } from '../../lib/invoicePdf';
 
 interface CustomerForm {
@@ -85,6 +88,8 @@ export default function Billing({ mode = 'new' }: BillingProps) {
   const [bill, setBill] = useState<any>(null);
   const [previewSaleId, setPreviewSaleId] = useState<string | null>(null);
   const [showCustomerExplorer, setShowCustomerExplorer] = useState(false);
+  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [showProductSearch, setShowProductSearch] = useState(false);
   const [downloadingSaleId, setDownloadingSaleId] = useState<string | null>(null);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isSavingCustomer, setIsSavingCustomer] = useState(false);
@@ -256,6 +261,22 @@ export default function Billing({ mode = 'new' }: BillingProps) {
     return Object.keys(errors).length === 0;
   };
 
+  // Open the registration form as a popup (never inline, so the wizard never reflows).
+  const openNewCustomerForm = (phone?: string) => {
+    setCustomerType('new');
+    setIsCustomerNotFound(false);
+    setCustomerForm({ ...emptyCustomerForm, phone: phone ?? '' });
+    setCustomerFormErrors({});
+    setMsg(null);
+    setShowNewCustomerModal(true);
+  };
+
+  const closeNewCustomerModal = () => {
+    setShowNewCustomerModal(false);
+    setCustomerType('existing');
+    setCustomerFormErrors({});
+  };
+
   // Save Customer Profile & Advance to Step 2 with auto-opened scanner
   const handleSaveCustomerAndProceed = async () => {
     if (!validateCustomerForm()) {
@@ -277,12 +298,40 @@ export default function Billing({ mode = 'new' }: BillingProps) {
         anniversary: customerForm.anniversary || null,
         marketing_consent: customerForm.marketing_consent,
       });
+      setShowNewCustomerModal(false);
       handleCustomerSelectedAndProceed(res.data);
     } catch (e: any) {
       setMsg({ text: e.message || 'Failed to register customer.', type: 'error' });
     } finally {
       setIsSavingCustomer(false);
     }
+  };
+
+  // Add a catalogue piece to this bill (shared by barcode scan and the search popup).
+  const addProduct = async (prod: any) => {
+    if (lines.find((l) => l.product_id === prod.id)) {
+      const text = `"${prod.sku}" is already added to this bill.`;
+      setMsg({ text, type: 'info' });
+      throw new Error(text);
+    }
+    const est = await api.post('/pricing/estimate', { product_id: prod.id });
+    setLines((prev) => [
+      ...prev,
+      {
+        product_id: prod.id,
+        sku: prod.sku,
+        name: prod.name,
+        purity: prod.purity,
+        net_gold_weight_g: prod.net_gold_weight_g,
+        gross_weight_g: prod.gross_weight_g,
+        est: est.data,
+      },
+    ]);
+    setBarcode('');
+    setMsg({
+      text: `Added ${prod.name} (${prod.sku}) — ${inr(est.data.line_total_inr)}`,
+      type: 'success',
+    });
   };
 
   // Add Product by Barcode / SKU
@@ -292,29 +341,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
     if (!value) return;
     try {
       const r = await api.get(`/products/barcode/${encodeURIComponent(value)}`);
-      const prod = r.data;
-      if (lines.find((l) => l.product_id === prod.id)) {
-        setMsg({ text: `"${prod.sku}" is already added to this bill.`, type: 'info' });
-        return;
-      }
-      const est = await api.post('/pricing/estimate', { product_id: prod.id });
-      setLines((prev) => [
-        ...prev,
-        {
-          product_id: prod.id,
-          sku: prod.sku,
-          name: prod.name,
-          purity: prod.purity,
-          net_gold_weight_g: prod.net_gold_weight_g,
-          gross_weight_g: prod.gross_weight_g,
-          est: est.data,
-        },
-      ]);
-      setBarcode('');
-      setMsg({
-        text: `Added ${prod.name} (${prod.sku}) — ${inr(est.data.line_total_inr)}`,
-        type: 'success',
-      });
+      await addProduct(r.data);
     } catch (e: any) {
       setMsg({ text: e.message || 'Product not found or unavailable.', type: 'error' });
     }
@@ -575,11 +602,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                       </div>
 
                       <div
-                        onClick={() => {
-                          setCustomerType('new');
-                          setIsCustomerNotFound(false);
-                          setMsg(null);
-                        }}
+                        onClick={() => openNewCustomerForm(searchPhone)}
                         style={{
                           flex: 1,
                           padding: 14,
@@ -638,10 +661,7 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                           </span>
                           <button
                             className="btn gold"
-                            onClick={() => {
-                              setCustomerType('new');
-                              setCustomerForm((prev) => ({ ...prev, phone: searchPhone }));
-                            }}
+                            onClick={() => openNewCustomerForm(searchPhone)}
                             style={{ padding: '6px 14px', fontSize: 12 }}
                           >
                             + Register New Customer
@@ -685,168 +705,16 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                     </div>
                   )}
 
-                  {/* Sub-view B: NEW CUSTOMER REGISTRATION FORM */}
+                  {/* Sub-view B: registration lives in a popup */}
                   {customerType === 'new' && !customer && (
-                    <div
-                      style={{
-                        background: 'var(--luxe-surface)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 12,
-                        padding: 18,
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <strong style={{ fontSize: 15, color: 'var(--color-espresso)' }}>
-                          New Customer Registration Form
-                        </strong>
-                        <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>All fields are mandatory except Anniversary</span>
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-                        {/* Name */}
-                        <div>
-                          <label className="lbl">Full Customer Name *</label>
-                          <input
-                            autoFocus
-                            value={customerForm.name}
-                            onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
-                            placeholder="e.g. Radhika Sethi"
-                          />
-                          {customerFormErrors.name && (
-                            <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.name}</div>
-                          )}
-                        </div>
-
-                        {/* Phone */}
-                        <div>
-                          <label className="lbl">Mobile Phone Number *</label>
-                          <input
-                            type="tel"
-                            value={customerForm.phone}
-                            onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
-                            placeholder="10-digit mobile number"
-                          />
-                          {customerFormErrors.phone && (
-                            <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.phone}</div>
-                          )}
-                        </div>
-
-                        {/* Email */}
-                        <div>
-                          <label className="lbl">Email Address *</label>
-                          <input
-                            type="email"
-                            value={customerForm.email}
-                            onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
-                            placeholder="e.g. radhika@example.com"
-                          />
-                          {customerFormErrors.email && (
-                            <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.email}</div>
-                          )}
-                        </div>
-
-                        {/* Street Address */}
-                        <div style={{ gridColumn: '1 / -1' }}>
-                          <label className="lbl">Street Address *</label>
-                          <input
-                            value={customerForm.address_line1}
-                            onChange={(e) => setCustomerForm({ ...customerForm, address_line1: e.target.value })}
-                            placeholder="House / street / locality"
-                          />
-                          {customerFormErrors.address_line1 && (
-                            <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.address_line1}</div>
-                          )}
-                        </div>
-
-                        {/* City */}
-                        <div>
-                          <label className="lbl">City *</label>
-                          <input
-                            value={customerForm.city}
-                            onChange={(e) => setCustomerForm({ ...customerForm, city: e.target.value })}
-                            placeholder="e.g. Bengaluru"
-                          />
-                          {customerFormErrors.city && (
-                            <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.city}</div>
-                          )}
-                        </div>
-
-                        {/* State */}
-                        <div>
-                          <label className="lbl">State *</label>
-                          <input
-                            value={customerForm.state}
-                            onChange={(e) => setCustomerForm({ ...customerForm, state: e.target.value })}
-                            placeholder="e.g. Karnataka"
-                          />
-                          {customerFormErrors.state && (
-                            <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.state}</div>
-                          )}
-                        </div>
-
-                        {/* PIN code */}
-                        <div>
-                          <label className="lbl">PIN Code *</label>
-                          <input
-                            value={customerForm.postal_code}
-                            onChange={(e) => setCustomerForm({ ...customerForm, postal_code: e.target.value })}
-                            placeholder="e.g. 560001"
-                          />
-                          {customerFormErrors.postal_code && (
-                            <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.postal_code}</div>
-                          )}
-                        </div>
-
-                        {/* Birthday (Mandatory) */}
-                        <div>
-                          <label className="lbl">Date of Birth *</label>
-                          <input
-                            type="date"
-                            value={customerForm.birthday}
-                            onChange={(e) => setCustomerForm({ ...customerForm, birthday: e.target.value })}
-                          />
-                          {customerFormErrors.birthday && (
-                            <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{customerFormErrors.birthday}</div>
-                          )}
-                        </div>
-
-                        {/* Anniversary Date (Optional) */}
-                        <div>
-                          <label className="lbl">Anniversary Date (Optional)</label>
-                          <input
-                            type="date"
-                            value={customerForm.anniversary}
-                            onChange={(e) => setCustomerForm({ ...customerForm, anniversary: e.target.value })}
-                          />
-                        </div>
-
-                        {/* Marketing Consent */}
-                        <div style={{ display: 'flex', alignItems: 'center', marginTop: 26 }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
-                            <input
-                              type="checkbox"
-                              style={{ width: 'auto' }}
-                              checked={customerForm.marketing_consent}
-                              onChange={(e) => setCustomerForm({ ...customerForm, marketing_consent: e.target.checked })}
-                            />
-                            <span>Opt-in for WhatsApp &amp; SMS digital invoices</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: 12, marginTop: 18, alignItems: 'center', flexWrap: 'wrap', borderTop: '1px solid var(--color-border)', paddingTop: 14 }}>
-                        <button
-                          className="btn gold"
-                          onClick={handleSaveCustomerAndProceed}
-                          disabled={isSavingCustomer}
-                          style={{ padding: '10px 22px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}
-                        >
-                          <span>{isSavingCustomer ? 'Saving Profile...' : '✓ Save Customer & Open Scanner →'}</span>
-                        </button>
-                        <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>
-                          Saves customer profile and automatically opens the camera scanner to scan jewellery tags.
-                        </span>
-                      </div>
+                    <div className="card" style={{ padding: 18 }}>
+                      <strong style={{ fontSize: 15, color: 'var(--color-espresso)' }}>Register a new customer</strong>
+                      <p style={{ fontSize: 13, color: 'var(--color-muted)', margin: '6px 0 12px' }}>
+                        The registration form opens in a popup so this billing wizard keeps its place. All fields are mandatory except anniversary.
+                      </p>
+                      <button type="button" className="btn gold" onClick={() => openNewCustomerForm(searchPhone || customerForm.phone)}>
+                        Open registration form
+                      </button>
                     </div>
                   )}
 
@@ -1049,6 +917,16 @@ export default function Billing({ mode = 'new' }: BillingProps) {
                     </div>
                     <button className="btn gold" onClick={() => addBarcode(barcode)} style={{ minWidth: 110 }}>
                       + Add Piece
+                    </button>
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={() => setShowProductSearch(true)}
+                      title="Search available stock and add a piece"
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, borderColor: 'var(--color-gold)' }}
+                    >
+                      <Icon paths={ICONS.search} size={15} />
+                      <span>Search Pieces</span>
                     </button>
                     <button
                       className="btn ghost"
@@ -1659,6 +1537,110 @@ export default function Billing({ mode = 'new' }: BillingProps) {
             </div>
           )}
         </div>
+      )}
+
+      {/* New Customer Registration Popup */}
+      {showNewCustomerModal && !customer && (
+        <Modal
+          title="Register new customer"
+          subtitle="The profile is saved once, then the bill continues to piece scanning."
+          icon={<Icon paths={ICONS.customers} size={19} />}
+          onClose={closeNewCustomerModal}
+          size="lg"
+          footer={
+            <>
+              <span className="modal-hint">All fields are mandatory except anniversary.</span>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={closeNewCustomerModal}>Cancel</button>
+              <button type="button" className="btn gold" onClick={handleSaveCustomerAndProceed} disabled={isSavingCustomer}>
+                {isSavingCustomer ? 'Saving profile…' : 'Save customer & continue →'}
+              </button>
+            </>
+          }
+        >
+          {msg?.type === 'error' && <div className="err-box" style={{ marginBottom: 12 }}>{msg.text}</div>}
+
+          <div className="modal-grid">
+            <div>
+              <label className="lbl">Full customer name *</label>
+              <input autoFocus value={customerForm.name}
+                onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
+                placeholder="e.g. Radhika Sethi" />
+              {customerFormErrors.name && <div className="modal-error">{customerFormErrors.name}</div>}
+            </div>
+            <div>
+              <label className="lbl">Mobile phone number *</label>
+              <input type="tel" value={customerForm.phone}
+                onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
+                placeholder="10-digit mobile number" />
+              {customerFormErrors.phone && <div className="modal-error">{customerFormErrors.phone}</div>}
+            </div>
+            <div>
+              <label className="lbl">Email address *</label>
+              <input type="email" value={customerForm.email}
+                onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
+                placeholder="e.g. radhika@example.com" />
+              {customerFormErrors.email && <div className="modal-error">{customerFormErrors.email}</div>}
+            </div>
+            <div>
+              <label className="lbl">Date of birth *</label>
+              <input type="date" value={customerForm.birthday}
+                onChange={(e) => setCustomerForm({ ...customerForm, birthday: e.target.value })} />
+              {customerFormErrors.birthday && <div className="modal-error">{customerFormErrors.birthday}</div>}
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label className="lbl">Street address *</label>
+              <input value={customerForm.address_line1}
+                onChange={(e) => setCustomerForm({ ...customerForm, address_line1: e.target.value })}
+                placeholder="House / street / locality" />
+              {customerFormErrors.address_line1 && <div className="modal-error">{customerFormErrors.address_line1}</div>}
+            </div>
+            <div>
+              <label className="lbl">City *</label>
+              <input value={customerForm.city}
+                onChange={(e) => setCustomerForm({ ...customerForm, city: e.target.value })}
+                placeholder="e.g. Bengaluru" />
+              {customerFormErrors.city && <div className="modal-error">{customerFormErrors.city}</div>}
+            </div>
+            <div>
+              <label className="lbl">State *</label>
+              <input value={customerForm.state}
+                onChange={(e) => setCustomerForm({ ...customerForm, state: e.target.value })}
+                placeholder="e.g. Karnataka" />
+              {customerFormErrors.state && <div className="modal-error">{customerFormErrors.state}</div>}
+            </div>
+            <div>
+              <label className="lbl">PIN code *</label>
+              <input value={customerForm.postal_code}
+                onChange={(e) => setCustomerForm({ ...customerForm, postal_code: e.target.value })}
+                placeholder="e.g. 560001" />
+              {customerFormErrors.postal_code && <div className="modal-error">{customerFormErrors.postal_code}</div>}
+            </div>
+            <div>
+              <label className="lbl">Anniversary date (optional)</label>
+              <input type="date" value={customerForm.anniversary}
+                onChange={(e) => setCustomerForm({ ...customerForm, anniversary: e.target.value })} />
+            </div>
+            <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                <input type="checkbox" style={{ width: 'auto' }} checked={customerForm.marketing_consent}
+                  onChange={(e) => setCustomerForm({ ...customerForm, marketing_consent: e.target.checked })} />
+                <span>Opt-in for WhatsApp &amp; SMS digital invoices</span>
+              </label>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Stock Search Popup */}
+      {showProductSearch && (
+        <ProductSearchModal
+          onClose={() => setShowProductSearch(false)}
+          onAdd={addProduct}
+          addedIds={lines.map((l) => l.product_id)}
+          title="Search pieces for this bill"
+          subtitle="Search available stock by name, SKU or design code. Add a piece or open its complete record without leaving the till."
+        />
       )}
 
       {/* Camera Barcode Scanner Modal with Manual Entry Option */}

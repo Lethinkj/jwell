@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { api } from '../../lib/api';
 import BarcodeLabel, { LabelData } from '../../components/BarcodeLabel';
 import ScannerModal from '../../components/ScannerModal';
+import Modal from '../../components/Modal';
+import { Icon, ICONS } from '../../components/icons';
 import { barcodeFilename, downloadBarcode } from '../../lib/barcode';
 
 // Admin-only Barcode Generator: A) new product + barcode, B) labels for existing, + scanner test.
@@ -13,6 +15,7 @@ export default function Barcodes() {
   const [labels, setLabels] = useState<{ data: LabelData; copies: number; key: string }[]>([]);
   const [copies, setCopies] = useState(1);
   const [testing, setTesting] = useState(false);
+  const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState<any>({ name: '', sku: '', category_id: '', purity: '22K', gross_weight_g: '', net_gold_weight_g: '', stone_weight_g: 0, making_charge_type: 'percentage', making_charge_value: 12, stone_value_inr: 0, wastage_charge_inr: 0, other_charges_inr: 0, acquisition_cost_inr: '', quantity: 1 });
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
   const cats = useQuery({ queryKey: ['cats'], queryFn: () => api.get('/categories') });
@@ -52,6 +55,7 @@ export default function Barcodes() {
         setLabels((prev) => [...prev, { data: lbl.data, copies: 1, key: `${r.data.id}-${Date.now()}` }]);
       }
       setMsg(`Saved ${qty} piece(s) — each with its own unique barcode. Labels queued below.`);
+      setShowNew(false);
     } catch (e: any) { setMsg(e.message); }
   };
 
@@ -85,7 +89,10 @@ export default function Barcodes() {
   return (
     <div className="page">
       <div className="no-print">
-        <h1 style={{ fontFamily: 'var(--font-display)', margin: 0 }}>Barcode Generator</h1>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', margin: 0, flex: 1 }}>Barcode Generator</h1>
+          <button type="button" className="btn gold" onClick={() => setShowNew(true)}>+ New product &amp; barcode</button>
+        </div>
         <p style={{ color: 'var(--color-muted)' }}>Code 128 labels from saved product IDs. The database value is the identifier — never the image alone.</p>
         {msg && <div className="card" style={{ marginBottom: 12 }}>{msg}</div>}
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -94,42 +101,22 @@ export default function Barcodes() {
           <button className="btn ghost" onClick={downloadAll} disabled={!labels.length}>⬇ Download all (PNG)</button>
           <button className="btn ghost" onClick={() => setLabels([])} disabled={!labels.length}>Clear queue</button>
         </div>
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))' }}>
-          <div className="card">
-            <strong>A. New product + barcode</strong>
-            {[['name', 'Jewellery name'], ['sku', 'SKU (unique; leave blank only if single piece — SKU required)'], ['gross_weight_g', 'Gross weight g'], ['net_gold_weight_g', 'Net gold weight g'], ['acquisition_cost_inr', 'Acquisition cost ₹'], ['quantity', 'Quantity (pieces, each gets own barcode)']].map(([k, l]) => (
-              <div key={k}><label className="lbl">{l}</label><input value={form[k]} onChange={(e) => set(k, e.target.value)} /></div>))}
-            <label className="lbl">Category</label>
-            <select value={form.category_id} onChange={(e) => set('category_id', e.target.value)}>
-              <option value="">—</option>{(cats.data?.data || []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <div className="filters">
-              <select value={form.purity} onChange={(e) => set('purity', e.target.value)}><option>24K</option><option>22K</option><option>18K</option><option>14K</option></select>
-              <select value={form.making_charge_type} onChange={(e) => set('making_charge_type', e.target.value)}><option value="percentage">making %</option><option value="per_gram">making ₹/g</option><option value="fixed">making flat ₹</option></select>
-              <input value={form.making_charge_value} onChange={(e) => set('making_charge_value', e.target.value)} placeholder="making value" />
-            </div>
-            <div className="filters">
-              <input value={form.stone_value_inr} onChange={(e) => set('stone_value_inr', e.target.value)} placeholder="stone ₹" />
-              <input value={form.wastage_charge_inr} onChange={(e) => set('wastage_charge_inr', e.target.value)} placeholder="wastage ₹" />
-              <input value={form.other_charges_inr} onChange={(e) => set('other_charges_inr', e.target.value)} placeholder="other ₹" />
-            </div>
-            <button className="btn gold" onClick={createAndLabel}>Save + generate barcode</button>
+        <div className="card">
+          <strong>B. Labels for existing products</strong>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <input placeholder="Search name / SKU / purity…" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && search()} />
+            <button className="btn" onClick={search}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon paths={ICONS.search} size={15} />Search</span>
+            </button>
           </div>
-          <div className="card">
-            <strong>B. Labels for existing products</strong>
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <input placeholder="Search name / SKU / purity…" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && search()} />
-              <button className="btn" onClick={search}>Search</button>
-            </div>
-            <label className="lbl">Copies per label</label>
-            <input type="number" min={1} max={50} value={copies} onChange={(e) => setCopies(Number(e.target.value) || 1)} style={{ maxWidth: 120 }} />
-            {(found).map((p: any) => (
-              <div key={p.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--color-border)', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1 }}><strong>{p.sku}</strong> {p.name}<br /><small style={{ color: 'var(--color-muted)' }}>{p.purity} • {p.net_gold_weight_g} g • {p.status}</small></div>
-                <button className="btn ghost" onClick={() => addLabel(p.id, copies)}>Label ×{copies}</button>
-                <button className="btn ghost" title="Replace barcode (audited, needs confirm)" onClick={() => regenerate(p.id, window.confirm('Replace this product\'s active barcode? This is audited.'))}>Regenerate</button>
-              </div>))}
-          </div>
+          <label className="lbl">Copies per label</label>
+          <input type="number" min={1} max={50} value={copies} onChange={(e) => setCopies(Number(e.target.value) || 1)} style={{ maxWidth: 120 }} />
+          {(found).map((p: any) => (
+            <div key={p.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--color-border)', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1 }}><strong>{p.sku}</strong> {p.name}<br /><small style={{ color: 'var(--color-muted)' }}>{p.purity} • {p.net_gold_weight_g} g • {p.status}</small></div>
+              <button className="btn ghost" onClick={() => addLabel(p.id, copies)}>Label ×{copies}</button>
+              <button className="btn ghost" title="Replace barcode (audited, needs confirm)" onClick={() => regenerate(p.id, window.confirm('Replace this product\'s active barcode? This is audited.'))}>Regenerate</button>
+            </div>))}
         </div>
       </div>
       {labels.length > 0 && (
@@ -140,6 +127,61 @@ export default function Barcodes() {
           </div>
         </div>
       )}
+
+      {showNew && (
+        <Modal
+          title="New product + barcode"
+          subtitle="Each piece is saved individually and gets its own unique Code 128 barcode."
+          icon={<Icon paths={ICONS.barcode} size={19} />}
+          onClose={() => setShowNew(false)}
+          size="lg"
+          footer={
+            <>
+              <span className="modal-hint">Quantity creates individually tracked pieces.</span>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => setShowNew(false)}>Cancel</button>
+              <button type="button" className="btn gold" onClick={createAndLabel}>Save + generate barcode</button>
+            </>
+          }
+        >
+          {msg && <div className="modal-note" style={{ marginBottom: 12 }}>{msg}</div>}
+          <div className="modal-grid">
+            {[['name', 'Jewellery name'], ['sku', 'SKU (unique)'], ['gross_weight_g', 'Gross weight g'], ['net_gold_weight_g', 'Net gold weight g'], ['acquisition_cost_inr', 'Acquisition cost ₹'], ['quantity', 'Quantity (pieces)']].map(([k, l]) => (
+              <div key={k}><label className="lbl">{l}</label><input value={form[k]} onChange={(e) => set(k, e.target.value)} /></div>))}
+            <div>
+              <label className="lbl">Category</label>
+              <select value={form.category_id} onChange={(e) => set('category_id', e.target.value)}>
+                <option value="">—</option>{(cats.data?.data || []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="lbl">Purity</label>
+              <select value={form.purity} onChange={(e) => set('purity', e.target.value)}><option>24K</option><option>22K</option><option>18K</option><option>14K</option></select>
+            </div>
+            <div>
+              <label className="lbl">Making charge type</label>
+              <select value={form.making_charge_type} onChange={(e) => set('making_charge_type', e.target.value)}><option value="percentage">making %</option><option value="per_gram">making ₹/g</option><option value="fixed">making flat ₹</option></select>
+            </div>
+            <div>
+              <label className="lbl">Making charge value</label>
+              <input value={form.making_charge_value} onChange={(e) => set('making_charge_value', e.target.value)} />
+            </div>
+            <div>
+              <label className="lbl">Stone value ₹</label>
+              <input value={form.stone_value_inr} onChange={(e) => set('stone_value_inr', e.target.value)} />
+            </div>
+            <div>
+              <label className="lbl">Wastage charge ₹</label>
+              <input value={form.wastage_charge_inr} onChange={(e) => set('wastage_charge_inr', e.target.value)} />
+            </div>
+            <div>
+              <label className="lbl">Other charges ₹</label>
+              <input value={form.other_charges_inr} onChange={(e) => set('other_charges_inr', e.target.value)} />
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {testing && <ScannerModal title="Scanner test — verifies against the database" onDetect={verifyScan} onClose={() => setTesting(false)} />}
     </div>
   );

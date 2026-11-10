@@ -12,9 +12,9 @@ const statusBadge = (s: string) => (s === 'available' ? 'ok' : s === 'sold' ? 'e
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '3px 0' }}>
-      <span style={{ color: 'var(--color-muted)' }}>{label}</span>
-      <span style={{ fontWeight: 600, textAlign: 'right' }}>{value}</span>
+    <div className="pd-field">
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }
@@ -66,51 +66,73 @@ export default function InventoryDetail() {
       {q.isError && <div className="err-box">Could not load this piece.</div>}
 
       {p && (
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))' }}>
-          <div>
-            <div style={{ position: 'relative' }}>
-              <img src={img} alt={p.name} onError={(e) => onImgError(e, p.sku)}
-                style={{ width: '100%', borderRadius: 12, border: '1px solid var(--color-border)' }} />
-              <span className={`badge ${statusBadge(p.status)}`} style={{ position: 'absolute', top: 10, right: 10 }}>{p.status}</span>
-            </div>
-            {barcodes.length > 0 && (
-              <div className="card" style={{ marginTop: 12 }}>
-                <strong>Barcode</strong>
-                {activeBarcode ? (
-                  <div style={{ marginTop: 8, textAlign: 'center' }}>
-                    {barcodePreview && (
-                      <img src={barcodePreview} alt={activeBarcode.barcode_value}
-                        style={{ maxWidth: '100%', border: '1px solid var(--color-border)', borderRadius: 6, background: 'var(--color-surface)' }} />
-                    )}
-                    <div style={{ marginTop: 4, letterSpacing: 1, fontWeight: 600 }}>{activeBarcode.barcode_value}</div>
-                    <button className="btn gold" style={{ marginTop: 8 }}
-                      onClick={() => downloadBarcode(activeBarcode.barcode_value, barcodeFilename(p.sku))}>
-                      ⬇ Download barcode (PNG)
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ marginTop: 6, color: 'var(--color-muted)' }}>No active barcode.</div>
-                )}
-                {barcodes.length > (activeBarcode ? 1 : 0) && (
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>All barcodes</div>
-                    <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {barcodes.map((b: any) => (
-                        <span key={b.id} className="chip" style={{ opacity: b.active ? 1 : 0.45 }}>
-                          {b.barcode_value}{!b.active ? ' (inactive)' : ''}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+        <div className="pd-page-top">
+          <div className="pd-page-media">
+            <img src={img} alt={p.name} onError={(e) => onImgError(e, p.sku)} className="pd-page-image" />
+            <span className={`badge ${statusBadge(p.status)}`} style={{ position: 'absolute', top: 8, right: 8 }}>{p.status}</span>
           </div>
 
-          <div>
-            <div className="card" style={{ marginBottom: 12 }}>
-              <strong>Quality &amp; weights</strong>
-              <div style={{ marginTop: 6, fontSize: 14 }}>
+          <div style={{ minWidth: 0 }}>
+            <div className="modal-kpis">
+              <div className="modal-kpi">
+                <small>Net gold</small>
+                <strong>{Number(p.net_gold_weight_g || 0)} g</strong>
+              </div>
+              <div className="modal-kpi">
+                <small>Acquisition</small>
+                <strong>{inr(p.acquisition_cost_inr)}</strong>
+              </div>
+              <div className="modal-kpi">
+                <small>Last sale</small>
+                <strong>{last ? inr(last.line_total_inr) : 'Not sold'}</strong>
+              </div>
+              <div className="modal-kpi">
+                <small>Gross weight</small>
+                <strong>{Number(p.gross_weight_g || 0)} g</strong>
+              </div>
+            </div>
+
+            {last ? (
+              <div className="pd-last-sale" style={{ marginTop: 0, marginBottom: 12 }}>
+                <div className="pd-last-head">
+                  <span className="pd-last-eyebrow">Last sale · buying customer</span>
+                  <span className={`badge ${last.sale_status === 'finalized' ? 'ok' : 'warn'}`}>{last.sale_status}</span>
+                </div>
+                <div className="pd-buyer">
+                  <div className="pd-buyer-avatar">{(last.customer_name || 'W').charAt(0).toUpperCase()}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <strong>{last.customer_name || 'Walk-in customer'}</strong>
+                    <div className="pd-buyer-meta">
+                      {last.customer_phone || 'No phone'}
+                      {last.customer_email ? ` • ${last.customer_email}` : ''}
+                      {last.customer_code ? ` • ${last.customer_code}` : ''}
+                      {last.customer_city ? ` • ${last.customer_city}` : ''}
+                    </div>
+                  </div>
+                  <div className="pd-buyer-amount">
+                    <strong>{inr(last.line_total_inr)}</strong>
+                    <small>this piece</small>
+                  </div>
+                </div>
+                <div className="pd-last-meta">
+                  <span><strong>{last.invoice_no}</strong> · bill {inr(last.total_inr)}</span>
+                  <span>{(last.sold_at || last.created_at)?.slice(0, 10)}</span>
+                  {last.payment_methods ? <span>Paid via {last.payment_methods}</span> : null}
+                  {last.offer_code ? <span>Offer {last.offer_code}</span> : null}
+                  {last.sale_status === 'finalized' && (
+                    <button type="button" className="btn ghost xs" onClick={() => setInvoiceSaleId(last.id)}>View invoice</button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="modal-note" style={{ marginBottom: 12 }}>
+                This piece has not been sold yet. It is currently <strong>{p.status}</strong>.
+              </div>
+            )}
+
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+              <div className="pd-panel">
+                <p className="modal-section-title">Quality &amp; weights</p>
                 <Field label="Status" value={p.status} />
                 <Field label="Purity" value={p.purity} />
                 <Field label="Gross weight" value={`${Number(p.gross_weight_g || 0)} g`} />
@@ -118,10 +140,8 @@ export default function InventoryDetail() {
                 <Field label="Net gold weight" value={`${Number(p.net_gold_weight_g || 0)} g`} />
                 <Field label="Acquired" value={p.created_at?.slice(0, 10) || '—'} />
               </div>
-            </div>
-            <div className="card">
-              <strong>Pricing inputs</strong>
-              <div style={{ marginTop: 6, fontSize: 14 }}>
+              <div className="pd-panel">
+                <p className="modal-section-title">Pricing inputs</p>
                 <Field label="Making charge" value={`${p.making_charge_type} · ${p.making_charge_value}`} />
                 <Field label="Stone value" value={inr(p.stone_value_inr)} />
                 <Field label="Wastage" value={inr(p.wastage_charge_inr)} />
@@ -148,10 +168,11 @@ export default function InventoryDetail() {
                         <strong>{s.invoice_no}</strong>
                         <span className={`badge ${s.sale_status === 'finalized' ? 'ok' : 'warn'}`} style={{ marginLeft: 8 }}>{s.sale_status}</span>
                       </div>
-                      <span style={{ fontWeight: 700, color: 'var(--color-gold-deep)' }}>{inr(s.total_inr)}</span>
+                      <span style={{ fontWeight: 700, color: 'var(--color-gold-deep)' }}>{inr(s.line_total_inr)}</span>
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 4 }}>
                       {(s.sold_at || s.created_at)?.slice(0, 10)} • {s.customer_name ? `${s.customer_name} (${s.customer_phone || '—'})` : 'Walk-in customer'}
+                      {s.payment_methods ? ` • ${s.payment_methods}` : ''}
                     </div>
                     <div style={{ fontSize: 12, marginTop: 2 }}>
                       This piece: <strong>{inr(s.line_total_inr)}</strong> • {s.sold_purity} • {Number(s.sold_net_gold_weight_g)} g
@@ -161,7 +182,7 @@ export default function InventoryDetail() {
                     {s.sale_status === 'finalized' && (
                       <button className="btn ghost" style={{ marginTop: 8, padding: '4px 10px', fontSize: 12 }}
                         onClick={() => setInvoiceSaleId(s.id)}>
-                        👁️ View invoice
+                        View invoice
                       </button>
                     )}
                   </div>
@@ -198,23 +219,60 @@ export default function InventoryDetail() {
             )}
           </div>
 
-          {(p.movements || []).length > 0 && (
-            <div className="card" style={{ marginTop: 16 }}>
-              <strong>Stock movements</strong>
-              <div className="tbl-wrap"><table className="tbl" style={{ marginTop: 8 }}>
-                <thead><tr><th>Date</th><th>Type</th><th>Qty</th><th>Weight Δ</th><th>Reason</th></tr></thead>
-                <tbody>{p.movements.map((m: any) => (
-                  <tr key={m.id}>
-                    <td>{m.created_at?.slice(0, 10)}</td>
-                    <td>{m.movement_type}</td>
-                    <td>{m.qty_delta}</td>
-                    <td>{Number(m.weight_delta_g || 0)} g</td>
-                    <td style={{ color: 'var(--color-muted)' }}>{m.reason || '—'}</td>
-                  </tr>
-                ))}</tbody>
-              </table></div>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', marginTop: 16 }}>
+            <div className="card">
+              <strong>Barcode</strong>
+              {barcodes.length === 0 ? (
+                <div style={{ marginTop: 6, color: 'var(--color-muted)' }}>No barcode assigned.</div>
+              ) : activeBarcode ? (
+                <div style={{ marginTop: 8 }}>
+                  {barcodePreview && (
+                    <img src={barcodePreview} alt={activeBarcode.barcode_value}
+                      style={{ maxWidth: '100%', border: '1px solid var(--color-border)', borderRadius: 6, background: 'var(--color-surface)' }} />
+                  )}
+                  <div style={{ marginTop: 4, letterSpacing: 1, fontWeight: 600 }}>{activeBarcode.barcode_value}</div>
+                  <button className="btn gold" style={{ marginTop: 8 }}
+                    onClick={() => downloadBarcode(activeBarcode.barcode_value, barcodeFilename(p.sku))}>
+                    Download barcode (PNG)
+                  </button>
+                  {barcodes.length > 1 && (
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>All barcodes</div>
+                      <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {barcodes.map((b: any) => (
+                          <span key={b.id} className="chip" style={{ opacity: b.active ? 1 : 0.45 }}>
+                            {b.barcode_value}{!b.active ? ' (inactive)' : ''}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ marginTop: 6, color: 'var(--color-muted)' }}>No active barcode.</div>
+              )}
             </div>
-          )}
+
+            <div className="card">
+              <strong>Stock movements</strong>
+              {(p.movements || []).length === 0 ? (
+                <div style={{ marginTop: 6, color: 'var(--color-muted)' }}>No movements recorded.</div>
+              ) : (
+                <div className="tbl-wrap"><table className="tbl" style={{ marginTop: 8 }}>
+                  <thead><tr><th>Date</th><th>Type</th><th>Qty</th><th>Weight Δ</th><th>Reason</th></tr></thead>
+                  <tbody>{p.movements.map((m: any) => (
+                    <tr key={m.id}>
+                      <td>{m.created_at?.slice(0, 10)}</td>
+                      <td>{m.movement_type}</td>
+                      <td>{m.qty_delta}</td>
+                      <td>{Number(m.weight_delta_g || 0)} g</td>
+                      <td style={{ color: 'var(--color-muted)' }}>{m.reason || '—'}</td>
+                    </tr>
+                  ))}</tbody>
+                </table></div>
+              )}
+            </div>
+          </div>
         </>
       )}
 

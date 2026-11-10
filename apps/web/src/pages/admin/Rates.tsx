@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { api, inr } from '../../lib/api';
 import { Icon, ICONS } from '../../components/icons';
+import Modal from '../../components/Modal';
 
 const GOLD = '#D6B45C';
 const GOLD_DEEP = '#B89A52';
@@ -13,10 +14,15 @@ export default function Rates() {
   const [rate, setRate] = useState('');
   const [reason, setReason] = useState('');
   const [msg, setMsg] = useState('');
+  const [showOverride, setShowOverride] = useState(false);
   const act = async (path: string, body?: any) => {
     setMsg('');
-    try { const r = await api.post(path, body); setMsg(`Saved ${r.data.rate_24k_per_g_inr}/g 24K (${r.data.source}). History unchanged — snapshots only.`); cur.refetch(); hist.refetch(); }
-    catch (e: any) { setMsg(e.message); }
+    try { const r = await api.post(path, body); setMsg(`Saved ${r.data.rate_24k_per_g_inr}/g 24K (${r.data.source}). History unchanged — snapshots only.`); cur.refetch(); hist.refetch(); return true; }
+    catch (e: any) { setMsg(e.message); return false; }
+  };
+  const doOverride = async () => {
+    const ok = await act('/gold-rates/override', { rate_per_g_inr: Number(rate), purity_basis: '24K', reason });
+    if (ok) setShowOverride(false);
   };
   const r = cur.data?.data;
   const rows: any[] = hist.data?.data || [];
@@ -97,14 +103,10 @@ export default function Rates() {
           <small style={{ color: 'var(--color-muted)' }}>CURRENT APPROVED RATE</small>
           <div style={{ fontSize: 32, fontWeight: 800 }}>{r ? `${inr(r.rate_24k_per_g_inr)}/g 24K` : '—'}</div>
           <small style={{ color: 'var(--color-muted)' }}>{r ? `${r.source} • observed ${new Date(r.observed_at).toLocaleString()} • freshness: ${freshness?.status} (${freshness?.ageMinutes} min)` : 'No rate yet — refresh or override.'}</small>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             <button className="btn ghost" onClick={() => act('/gold-rates/refresh')}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><Icon paths={ICONS.refresh} size={15} />Refresh from provider</span></button>
+            <button className="btn gold" onClick={() => { setMsg(''); setShowOverride(true); }}>Manual override</button>
           </div>
-          <hr style={{ borderColor: 'var(--color-border)', margin: '16px 0' }} />
-          <strong>Manual override (audited)</strong>
-          <label className="lbl">Rate ₹/g (24K)</label><input value={rate} onChange={(e) => setRate(e.target.value)} placeholder="e.g. 9850" />
-          <label className="lbl">Reason (required)</label><input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Owner approval ref…" />
-          <button className="btn gold" style={{ marginTop: 10 }} onClick={() => act('/gold-rates/override', { rate_per_g_inr: Number(rate), purity_basis: '24K', reason })}>Approve override</button>
         </div>
         <div className="card"><strong>History (latest 60)</strong>
           <div className="tbl-wrap"><table className="tbl"><thead><tr><th>Observed</th><th>Source</th><th>24K ₹/g</th></tr></thead><tbody>
@@ -112,6 +114,28 @@ export default function Rates() {
           </tbody></table></div>
         </div>
       </div>
+      {showOverride && (
+        <Modal
+          title="Manual 24K rate override"
+          subtitle="Audited. Current estimates move; historical invoices never reprice."
+          onClose={() => setShowOverride(false)}
+          size="sm"
+          footer={
+            <>
+              <span className="modal-hint">A reason is mandatory for the audit trail.</span>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => setShowOverride(false)}>Cancel</button>
+              <button type="button" className="btn gold" onClick={doOverride} disabled={!rate || !reason.trim()}>Approve override</button>
+            </>
+          }
+        >
+          {msg && <div className="err-box" style={{ marginBottom: 12 }}>{msg}</div>}
+          <label className="lbl">Rate ₹/g (24K)</label>
+          <input type="number" min={0} autoFocus value={rate} onChange={(e) => setRate(e.target.value)} placeholder="e.g. 9850" />
+          <label className="lbl">Reason (required)</label>
+          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Owner approval ref…" />
+        </Modal>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../lib/api';
 import RichTextEditor from './RichTextEditor';
+import Modal from './Modal';
 import { FESTIVAL_PLACEHOLDER_KEYS, toPlaceholders } from '../lib/placeholders';
 
 type Festival = {
@@ -18,6 +19,7 @@ export default function FestivalsPanel() {
   const [edits, setEdits] = useState<Record<string, Festival>>({});
   const [newName, setNewName] = useState('');
   const [newDate, setNewDate] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
 
   const festivals = q.data?.data || [];
   const cur = (f: Festival) => edits[f.id] || f;
@@ -50,7 +52,7 @@ export default function FestivalsPanel() {
     if (!newName.trim()) return;
     try {
       await api.post('/admin/festivals', { name: newName.trim(), festival_date: newDate || null });
-      setNewName(''); setNewDate(''); q.refetch();
+      setNewName(''); setNewDate(''); setShowAdd(false); q.refetch();
     } catch (e: any) { setMsg(e.message); }
   };
 
@@ -65,15 +67,33 @@ export default function FestivalsPanel() {
 
   return (
     <div className="card" style={{ marginTop: 16 }}>
-      <strong>Festival greetings</strong>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <strong style={{ flex: 1 }}>Festival greetings</strong>
+        <button type="button" className="btn gold sm" onClick={() => { setMsg(''); setShowAdd(true); }}>+ Add festival</button>
+      </div>
       <p style={{ color: 'var(--color-muted)', fontSize: 13 }}>Edit each festival's message. Enable "Auto-send" below to have them emailed automatically on the date.</p>
       {msg && <div className="card" style={{ marginBottom: 10 }}>{msg}</div>}
 
-      <div className="filters" style={{ alignItems: 'flex-end' }}>
-        <div><label className="lbl">New festival</label><input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Onam" /></div>
-        <div><label className="lbl">Date</label><input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} /></div>
-        <button className="btn" style={{ flex: '0 0 auto' }} onClick={add}>+ Add festival</button>
-      </div>
+      {showAdd && (
+        <Modal
+          title="Add festival"
+          subtitle="The greeting can be written after the festival is created."
+          onClose={() => setShowAdd(false)}
+          size="sm"
+          footer={
+            <>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => setShowAdd(false)}>Cancel</button>
+              <button type="button" className="btn gold" onClick={add} disabled={!newName.trim()}>Add festival</button>
+            </>
+          }
+        >
+          <label className="lbl">Festival name</label>
+          <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Onam" />
+          <label className="lbl">Date (optional)</label>
+          <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
+        </Modal>
+      )}
 
       {festivals.map((f) => {
         const c = cur(f);

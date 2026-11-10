@@ -268,6 +268,40 @@ router.get('/reports/sales', requireRoles('admin'), async (req, res) => {
     byDay, byCat, byPay,
   } });
 });
+router.get('/reports/category-products', requireRoles('admin'), async (req, res) => {
+  const { s, e } = range(req);
+  const { category, q } = req.query;
+  const conds = [`s.shop_id=?`, `s.sold_at>=?`, `s.sold_at<=?`, `s.status='finalized'`];
+  const args = [req.user.shop_id, s, e];
+  if (category) { conds.push(`COALESCE(c.name,'—')=?`); args.push(category); }
+  if (q) {
+    conds.push('(p.name LIKE ? OR p.sku LIKE ? OR p.design_code LIKE ? OR s.invoice_no LIKE ?)');
+    args.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+  }
+  const rows = await all(`SELECT si.id sale_item_id, s.id sale_id, s.invoice_no, s.sold_at, s.total_inr,
+      si.line_total_inr, si.net_gold_weight_g, si.purity sold_purity, si.offer_code,
+      p.id product_id, p.name, p.sku, p.design_code, p.image_url, p.status product_status,
+      p.acquisition_cost_inr, p.net_gold_weight_g product_net_gold_weight_g,
+      COALESCE(c.name,'—') category_name, c.slug category_slug,
+      cu.id customer_id, cu.name customer_name, cu.phone customer_phone,
+      cu.email customer_email, cu.customer_code,
+      (SELECT string_agg(DISTINCT py.method, ', ') FROM payments py WHERE py.sale_id = s.id) payment_methods
+    FROM sale_items si
+    JOIN sales s ON s.id=si.sale_id
+    JOIN products p ON p.id=si.product_id
+    LEFT JOIN categories c ON c.id=p.category_id
+    LEFT JOIN customers cu ON cu.id=s.customer_id
+    WHERE ${conds.join(' AND ')}
+    ORDER BY s.sold_at DESC LIMIT 300`, ...args);
+  const summary = {
+    pieces: rows.length,
+    revenue: rows.reduce((a, r) => a + Number(r.line_total_inr || 0), 0),
+    weight_g: rows.reduce((a, r) => a + Number(r.net_gold_weight_g || 0), 0),
+    customers: new Set(rows.map((r) => r.customer_id).filter(Boolean)).size,
+    last_sold_at: rows.length ? rows[0].sold_at : null,
+  };
+  res.json({ data: rows, summary, category: category || null, from: s, to: e });
+});
 router.get('/reports/inventory', requireRoles('admin'), async (req, res) => {
   const byCat = await all(`SELECT c.name category, COUNT(*) pieces, SUM(p.net_gold_weight_g) weight_g, SUM(p.acquisition_cost_inr) acq_inr
     FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE p.shop_id=? AND p.status='available' GROUP BY c.name`, req.user.shop_id);

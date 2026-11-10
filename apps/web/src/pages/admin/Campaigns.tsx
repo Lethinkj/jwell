@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../lib/api';
 import SendMessageModal from '../../components/SendMessageModal';
+import Modal from '../../components/Modal';
 import { FESTIVAL_PLACEHOLDER_KEYS, toPlaceholders } from '../../lib/placeholders';
 
 type OccItem = {
@@ -35,6 +36,7 @@ export default function Campaigns() {
   const [busy, setBusy] = useState('');
   const [editing, setEditing] = useState<any | null>(null);
   const [editMsg, setEditMsg] = useState('');
+  const [showNew, setShowNew] = useState(false);
 
   const up = upcoming.data?.data;
   const days = up?.window?.days ?? 10;
@@ -55,6 +57,7 @@ export default function Campaigns() {
         ? `Queued to ${r.data.queued} opted-in recipient(s). Approve it to send.${when}`
         : `Queued to ${r.data.queued} opted-in recipient(s).${when}`);
       setForm({ ...form, name: '', schedule_at: '' });
+      setShowNew(false);
       camps.refetch();
     } catch (e: any) { setMsg(e.message); }
   };
@@ -158,7 +161,10 @@ export default function Campaigns() {
 
   return (
     <div className="page">
-      <h1 style={{ fontFamily: 'var(--font-display)', margin: 0 }}>Offers &amp; campaign center</h1>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', margin: 0, flex: 1 }}>Offers &amp; campaign center</h1>
+        <button type="button" className="btn gold" onClick={() => { setMsg(''); setShowNew(true); }}>+ New campaign</button>
+      </div>
       <p style={{ color: 'var(--color-muted)' }}>Upcoming occasions, consent-checked bulk campaigns, and discount offers. Messages are configured in the Email section.</p>
       {msg && <div className="card" style={{ marginBottom: 12 }}>{msg}</div>}
 
@@ -194,21 +200,6 @@ export default function Campaigns() {
           <table className="tbl"><thead><tr><th>Code</th><th>Rule</th><th>Validity</th></tr></thead><tbody>
             {(offers.data?.data || []).map((o: any) => <tr key={o.id}><td>{o.code}</td><td>{o.discount_type} {o.discount_value} (min {o.min_purchase_inr})</td><td><small>{o.valid_from?.slice(0, 10)} → {o.valid_to?.slice(0, 10)}</small></td></tr>)}
           </tbody></table>
-          <hr style={{ borderColor: 'var(--color-border)', margin: '14px 0' }} />
-          <strong>New campaign</strong>
-          <label className="lbl">Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Diwali 2026 blast" />
-          <label className="lbl">Template</label><textarea rows={3} value={form.template} onChange={(e) => setForm({ ...form, template: e.target.value })} />
-          <div className="filters">
-            <select value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="both">Both</option></select>
-            <select value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })}><option value="manual">Manual + approval</option><option value="automatic">Automatic</option></select>
-            <input value={form.offer_code} onChange={(e) => setForm({ ...form, offer_code: e.target.value })} placeholder="Offer code" />
-          </div>
-          <label className="lbl">Send date &amp; time</label>
-          <input type="datetime-local" value={form.schedule_at} onChange={(e) => setForm({ ...form, schedule_at: e.target.value })} />
-          <div style={{ color: 'var(--color-muted)', fontSize: 12, margin: '6px 0 10px' }}>
-            {form.schedule_at ? `Will send automatically on ${new Date(form.schedule_at).toLocaleString()}.` : 'Leave blank to approve and send manually (you’ll be asked on login).'}
-          </div>
-          <button className="btn gold" onClick={create}>Queue campaign</button>
         </div>
         <div className="card"><strong>Campaigns</strong>
           <div className="tbl-wrap" style={{ marginTop: 8, maxHeight: 420, overflowY: 'auto' }}>
@@ -252,6 +243,37 @@ export default function Campaigns() {
         </div>
       </div>
 
+      {showNew && (
+        <Modal
+          title="New campaign"
+          subtitle="Recipients are opted-in customers only. Manual mode waits for your approval."
+          onClose={() => setShowNew(false)}
+          size="md"
+          footer={
+            <>
+              <span className="modal-hint">Leave the date blank to approve and send manually.</span>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => setShowNew(false)}>Cancel</button>
+              <button type="button" className="btn gold" onClick={create}>Queue campaign</button>
+            </>
+          }
+        >
+          {msg && <div className="err-box" style={{ marginBottom: 12 }}>{msg}</div>}
+          <label className="lbl">Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Diwali 2026 blast" />
+          <label className="lbl">Template</label><textarea rows={3} value={form.template} onChange={(e) => setForm({ ...form, template: e.target.value })} />
+          <div className="filters">
+            <select value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="both">Both</option></select>
+            <select value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })}><option value="manual">Manual + approval</option><option value="automatic">Automatic</option></select>
+            <input value={form.offer_code} onChange={(e) => setForm({ ...form, offer_code: e.target.value })} placeholder="Offer code" />
+          </div>
+          <label className="lbl">Send date &amp; time</label>
+          <input type="datetime-local" value={form.schedule_at} onChange={(e) => setForm({ ...form, schedule_at: e.target.value })} />
+          <div style={{ color: 'var(--color-muted)', fontSize: 12, margin: '6px 0 10px' }}>
+            {form.schedule_at ? `Will send automatically on ${new Date(form.schedule_at).toLocaleString()}.` : 'Leave blank to approve and send manually (you’ll be asked on login).'}
+          </div>
+        </Modal>
+      )}
+
       {compose && (
         <SendMessageModal
           title={compose.title}
@@ -268,33 +290,37 @@ export default function Campaigns() {
       )}
 
       {editing && (
-        <div onClick={() => setEditing(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(71,16,29,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={(e) => e.stopPropagation()} className="card" style={{ background: 'var(--color-surface)', maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto', borderTop: '4px solid var(--color-gold-deep)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>Edit campaign</h3>
-              <button className="btn ghost" onClick={() => setEditing(null)}>✕</button>
-            </div>
-            {editMsg && <div className="card" style={{ marginTop: 10, fontSize: 13 }}>{editMsg}</div>}
-            <label className="lbl">Name</label>
-            <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
-            <label className="lbl">Template</label>
-            <textarea rows={3} value={editing.template} onChange={(e) => setEditing({ ...editing, template: e.target.value })} />
-            <div className="filters" style={{ marginTop: 8 }}>
-              <select value={editing.channel} onChange={(e) => setEditing({ ...editing, channel: e.target.value })}><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="both">Both</option></select>
-              <select value={editing.mode} onChange={(e) => setEditing({ ...editing, mode: e.target.value })}><option value="manual">Manual + approval</option><option value="automatic">Automatic</option></select>
-              <input value={editing.offer_code || ''} onChange={(e) => setEditing({ ...editing, offer_code: e.target.value })} placeholder="Offer code" />
-            </div>
-            <label className="lbl">Send date &amp; time</label>
-            <input type="datetime-local" value={editing.schedule_at || ''} onChange={(e) => setEditing({ ...editing, schedule_at: e.target.value })} />
-            <div style={{ color: 'var(--color-muted)', fontSize: 12, margin: '6px 0 10px' }}>
-              {editing.schedule_at ? `Will send automatically on ${new Date(editing.schedule_at).toLocaleString()}.` : 'No date — approve and send manually.'}
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn gold" disabled={busy === `${editing.id}:edit`} onClick={saveEdit}>{busy === `${editing.id}:edit` ? 'Saving…' : 'Save changes'}</button>
-              <button className="btn ghost" onClick={() => setEditing(null)}>Cancel</button>
-            </div>
+        <Modal
+          title="Edit campaign"
+          subtitle="Update the message, channel or automatic send time."
+          onClose={() => setEditing(null)}
+          size="md"
+          footer={
+            <>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => setEditing(null)}>Cancel</button>
+              <button type="button" className="btn gold" disabled={busy === `${editing.id}:edit`} onClick={saveEdit}>
+                {busy === `${editing.id}:edit` ? 'Saving…' : 'Save changes'}
+              </button>
+            </>
+          }
+        >
+          {editMsg && <div className="err-box" style={{ marginBottom: 12 }}>{editMsg}</div>}
+          <label className="lbl">Name</label>
+          <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+          <label className="lbl">Template</label>
+          <textarea rows={3} value={editing.template} onChange={(e) => setEditing({ ...editing, template: e.target.value })} />
+          <div className="filters" style={{ marginTop: 8 }}>
+            <select value={editing.channel} onChange={(e) => setEditing({ ...editing, channel: e.target.value })}><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="both">Both</option></select>
+            <select value={editing.mode} onChange={(e) => setEditing({ ...editing, mode: e.target.value })}><option value="manual">Manual + approval</option><option value="automatic">Automatic</option></select>
+            <input value={editing.offer_code || ''} onChange={(e) => setEditing({ ...editing, offer_code: e.target.value })} placeholder="Offer code" />
           </div>
-        </div>
+          <label className="lbl">Send date &amp; time</label>
+          <input type="datetime-local" value={editing.schedule_at || ''} onChange={(e) => setEditing({ ...editing, schedule_at: e.target.value })} />
+          <div style={{ color: 'var(--color-muted)', fontSize: 12, margin: '6px 0 10px' }}>
+            {editing.schedule_at ? `Will send automatically on ${new Date(editing.schedule_at).toLocaleString()}.` : 'No date — approve and send manually.'}
+          </div>
+        </Modal>
       )}
     </div>
   );

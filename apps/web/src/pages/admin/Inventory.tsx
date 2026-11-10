@@ -1,19 +1,33 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, inr } from '../../lib/api';
 import { pieceImage, onImgError } from '../../lib/images';
+import { Icon, ICONS } from '../../components/icons';
+import ProductDetailModal from '../../components/ProductDetailModal';
+import ProductFormModal from '../../components/ProductFormModal';
 
 const PURITIES = ['', '24K', '22K', '18K', '14K'];
 const STATUSES = [['available', 'Available'], ['all', 'All statuses'], ['sold', 'Sold'], ['reserved', 'Reserved'], ['damaged', 'Damaged']];
 
-export default function Inventory() {
+export default function Inventory({ startNew = false }: { startNew?: boolean }) {
+  const nav = useNavigate();
+  const [sp] = useSearchParams();
+  const editId = sp.get('id') || '';
+  const [qInput, setQInput] = useState('');
   const [q, setQ] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [purity, setPurity] = useState('');
   const [status, setStatus] = useState('available');
   const [minW, setMinW] = useState('');
   const [maxW, setMaxW] = useState('');
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(startNew || !!editId);
+
+  const closeForm = () => {
+    setFormOpen(false);
+    if (startNew || editId) nav('/admin/inventory', { replace: true });
+  };
 
   const params = new URLSearchParams({ q, status, limit: '50' });
   if (categoryId) params.set('category_id', categoryId);
@@ -36,16 +50,17 @@ export default function Inventory() {
   const totGold = rows.reduce((s, p) => s + (Number(p.net_gold_weight_g) || 0), 0);
   const totAcq = rows.reduce((s, p) => s + (Number(p.acquisition_cost_inr) || 0), 0);
 
-  const reset = () => { setQ(''); setCategoryId(''); setPurity(''); setStatus('available'); setMinW(''); setMaxW(''); };
+  const runSearch = () => setQ(qInput.trim());
+  const reset = () => { setQInput(''); setQ(''); setCategoryId(''); setPurity(''); setStatus('available'); setMinW(''); setMaxW(''); };
 
   return (
     <div className="page">
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', margin: 0, flex: 1 }}>Inventory</h1>
-        <Link className="btn gold" to="/admin/inventory/new">+ Add piece</Link>
+        <button type="button" className="btn gold" onClick={() => setFormOpen(true)}>+ Add piece</button>
         <Link className="btn ghost" to="/admin/inventory/report">Purchase report</Link>
       </div>
-      <p style={{ color: 'var(--color-muted)' }}>Every piece in the shop — search, filter, and watch low-stock categories (under 5 pieces).</p>
+      <p style={{ color: 'var(--color-muted)' }}>Every piece in the shop — search, filter, and watch low-stock categories (under 5 pieces). Click any piece for its full record, last sale and buying customer.</p>
 
       {lowCats.length > 0 && (
         <div className="card" style={{ borderLeft: '4px solid var(--color-warn, #c77)', marginBottom: 12 }}>
@@ -59,9 +74,22 @@ export default function Inventory() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <strong>Search & filters</strong>
+        <strong>Search &amp; filters</strong>
         <div className="filters" style={{ marginTop: 8 }}>
-          <input placeholder="Search SKU / name / design…" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 200 }} />
+          <input
+            placeholder="Search SKU / name / design…"
+            value={qInput}
+            onChange={(e) => setQInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); runSearch(); }
+            }}
+            style={{ minWidth: 200 }}
+          />
+          <button type="button" className="btn gold" onClick={runSearch} style={{ flex: '0 0 auto', minWidth: 0 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              <Icon paths={ICONS.search} size={15} />Search
+            </span>
+          </button>
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
             <option value="">All categories</option>{(cats.data?.data || []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -73,16 +101,23 @@ export default function Inventory() {
           </select>
           <input placeholder="Min g" value={minW} onChange={(e) => setMinW(e.target.value)} style={{ width: 80 }} />
           <input placeholder="Max g" value={maxW} onChange={(e) => setMaxW(e.target.value)} style={{ width: 80 }} />
-          <button className="btn ghost" onClick={reset}>Clear</button>
+          <button type="button" className="btn ghost" onClick={reset}>Clear</button>
         </div>
+        <small className="modal-hint">Search applies when you press the Search button or Enter. Filters apply immediately.</small>
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
         <strong>Stock {list.data ? `(${list.data.total} found)` : ''}</strong>
-        {rows.length === 0 ? <div className="empty">No pieces match — try clearing filters.</div>
+        {list.isLoading ? <div className="empty">Loading stock…</div>
+        : rows.length === 0 ? <div className="empty">No pieces match — try clearing filters.</div>
         : <div className="grid catalog" style={{ marginTop: 12 }}>{rows.map((p: any) => (
-          <Link key={p.id} to={`/admin/inventory/${p.id}`} className="tile"
-            style={{ textDecoration: 'none', color: 'inherit' }} title="View details & sale">
+          <button
+            key={p.id}
+            type="button"
+            className="tile"
+            onClick={() => setDetailId(p.id)}
+            title="Open the full piece record"
+          >
             <div style={{ position: 'relative' }}>
               <img src={imgOf(p)} alt={p.name} loading="lazy" onError={(e) => onImgError(e, p.sku)} />
               {isLow(p) && p.status === 'available' && (
@@ -98,8 +133,17 @@ export default function Inventory() {
                 <small style={{ color: 'var(--color-gold-deep)', fontWeight: 600 }}>View details →</small>
               </div>
             </div>
-          </Link>))}</div>}
+          </button>))}</div>}
       </div>
+
+      {detailId && <ProductDetailModal productId={detailId} onClose={() => setDetailId(null)} />}
+      {formOpen && (
+        <ProductFormModal
+          productId={editId || undefined}
+          onClose={closeForm}
+          onSaved={() => list.refetch()}
+        />
+      )}
     </div>
   );
 }

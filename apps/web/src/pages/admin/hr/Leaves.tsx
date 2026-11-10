@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../../lib/api';
+import Modal from '../../../components/Modal';
 import { ICONS } from '../../../components/icons';
 import HrShell, { KPI_TINTS, useHrOverview } from './HrShell';
 
@@ -29,6 +30,9 @@ export default function HRLeaves() {
   const [typeForm, setTypeForm] = useState({ name: '', annual_quota: '12', paid: true });
   const [holidayForm, setHolidayForm] = useState({ holiday_date: today(), name: '', holiday_type: 'public' });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [showApply, setShowApply] = useState(false);
+  const [showType, setShowType] = useState(false);
+  const [showHoliday, setShowHoliday] = useState(false);
 
   const employees = useQuery({ queryKey: ['hr-employees-all'], queryFn: () => api.get('/hr/employees?status=all') });
   const types = useQuery({ queryKey: ['hr-leave-types'], queryFn: () => api.get('/hr/leave-types') });
@@ -63,7 +67,7 @@ export default function HRLeaves() {
       () => api.post('/hr/leaves', { ...form, days: reqDays }),
       'Leave request submitted (status: pending).',
     );
-    if (done) setForm({ ...form, reason: '' });
+    if (done) { setForm({ ...form, reason: '' }); setShowApply(false); }
   };
   const decide = (l: Leave, next: 'approved' | 'rejected') => {
     const note = next === 'rejected' ? (window.prompt('Reason for rejection (optional)') || '') : '';
@@ -76,7 +80,7 @@ export default function HRLeaves() {
       () => api.post('/hr/leave-types', { name: typeForm.name.trim(), annual_quota: Number(typeForm.annual_quota) || 0, paid: typeForm.paid }),
       'Leave type added.',
     );
-    if (done) setTypeForm({ name: '', annual_quota: '12', paid: true });
+    if (done) { setTypeForm({ name: '', annual_quota: '12', paid: true }); setShowType(false); }
   };
   const addHoliday = async () => {
     if (!holidayForm.name.trim()) return;
@@ -84,7 +88,7 @@ export default function HRLeaves() {
       () => api.post('/hr/holidays', holidayForm),
       'Holiday added.',
     );
-    if (done) setHolidayForm({ ...holidayForm, name: '' });
+    if (done) { setHolidayForm({ ...holidayForm, name: '' }); setShowHoliday(false); }
   };
   const removeHoliday = (h: Holiday) => window.confirm(`Delete holiday ${h.name}?`) &&
     act(() => api.del(`/hr/holidays/${h.id}`), 'Holiday deleted.');
@@ -99,59 +103,17 @@ export default function HRLeaves() {
         { label: 'Holidays', value: String(holidayRows.length), meta: `in ${year}`, icon: ICONS.gem, ...KPI_TINTS.rose },
         { label: 'Leave types', value: String(leaveTypes.length), meta: 'configured policies', icon: ICONS.briefcase, ...KPI_TINTS.gold },
       ]}
+      actions={<button className="btn gold" onClick={() => { setMsg(null); setShowApply(true); }}>+ Apply leave</button>}
     >
       {msg && <div className={`hr-msg${msg.ok ? '' : ' err'}`}>{msg.text}</div>}
-
-      <div className="hr-grid-main">
-        <div className="hr-card">
-          <div className="hr-card-head">
-            <h2>Apply for leave</h2>
-            <span className="sub">Creates a pending request</span>
-          </div>
-          <div className="hr-card-body">
-            <form onSubmit={(e) => { e.preventDefault(); apply(); }}>
-              <div className="hr-form-grid">
-                <div className="hr-field span-2">
-                  <label className="lbl" htmlFor="lv-employee">Employee</label>
-                  <select id="lv-employee" value={form.employee_id} onChange={(e) => setForm({ ...form, employee_id: e.target.value })}>
-                    <option value="">Select employee</option>
-                    {staff.map((e) => <option key={e.id} value={e.id}>{e.emp_code} · {e.full_name}</option>)}
-                  </select>
-                </div>
-                <div className="hr-field">
-                  <label className="lbl" htmlFor="lv-type">Leave type</label>
-                  <select id="lv-type" value={form.leave_type_id} onChange={(e) => setForm({ ...form, leave_type_id: e.target.value })}>
-                    <option value="">Select type</option>
-                    {leaveTypes.map((t) => <option key={t.id} value={t.id}>{t.name}{t.paid ? '' : ' (unpaid)'}</option>)}
-                  </select>
-                </div>
-                <div className="hr-field">
-                  <label className="lbl" htmlFor="lv-from">From</label>
-                  <input id="lv-from" type="date" value={form.from_date} onChange={(e) => setForm({ ...form, from_date: e.target.value })} />
-                </div>
-                <div className="hr-field">
-                  <label className="lbl" htmlFor="lv-to">To</label>
-                  <input id="lv-to" type="date" value={form.to_date} onChange={(e) => setForm({ ...form, to_date: e.target.value })} />
-                </div>
-                <div className="hr-field span-all">
-                  <label className="lbl" htmlFor="lv-reason">Reason</label>
-                  <input id="lv-reason" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Optional" />
-                </div>
-              </div>
-              <div className="hr-form-actions">
-                <button type="submit" className="btn gold" disabled={!form.employee_id || !form.leave_type_id || !reqDays}>
-                  Submit request
-                </button>
-                <span className="hr-stat" style={{ alignSelf: 'center' }}>Requested: {reqDays} day(s)</span>
-              </div>
-            </form>
-          </div>
-        </div>
 
         <div className="hr-card">
           <div className="hr-card-head">
             <h2>Leave types</h2>
             <span className="sub">{leaveTypes.length} configured</span>
+            <div className="hr-card-actions">
+              <button className="btn ghost sm" onClick={() => { setMsg(null); setShowType(true); }}>+ Add type</button>
+            </div>
           </div>
           <div className="tbl-wrap">
             <table className="tbl">
@@ -164,32 +126,7 @@ export default function HRLeaves() {
               </tbody>
             </table>
           </div>
-          <div className="hr-card-body" style={{ paddingTop: 14 }}>
-            <p className="hr-section-label">Add leave type</p>
-            <div className="hr-toolbar">
-              <input
-                className="grow"
-                value={typeForm.name}
-                onChange={(e) => setTypeForm({ ...typeForm, name: e.target.value })}
-                placeholder="Name"
-                onKeyDown={(e) => e.key === 'Enter' && addType()}
-              />
-              <input
-                type="number" min={0} style={{ maxWidth: 90 }} value={typeForm.annual_quota}
-                onChange={(e) => setTypeForm({ ...typeForm, annual_quota: e.target.value })} title="Annual quota"
-                aria-label="Annual quota"
-              />
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', fontSize: 13 }}>
-                <input
-                  type="checkbox" style={{ width: 'auto' }} checked={typeForm.paid}
-                  onChange={(e) => setTypeForm({ ...typeForm, paid: e.target.checked })}
-                /> Paid
-              </label>
-              <button className="btn ghost sm" onClick={addType}>Add</button>
-            </div>
-          </div>
         </div>
-      </div>
 
       <div className="hr-card">
         <div className="hr-card-head">
@@ -264,6 +201,7 @@ export default function HRLeaves() {
             <span className="sub">{holidayRows.length} days</span>
             <div className="hr-card-actions">
               <input type="number" style={{ maxWidth: 110 }} value={year} onChange={(e) => setYear(e.target.value)} aria-label="Holiday year" />
+              <button className="btn ghost sm" onClick={() => { setMsg(null); setShowHoliday(true); }}>+ Add holiday</button>
             </div>
           </div>
           <div className="tbl-wrap">
@@ -280,20 +218,108 @@ export default function HRLeaves() {
               </tbody>
             </table>
           </div>
-          <div className="hr-card-foot">
-            <input type="date" style={{ maxWidth: 150 }} value={holidayForm.holiday_date}
-              onChange={(e) => setHolidayForm({ ...holidayForm, holiday_date: e.target.value })} aria-label="Holiday date" />
-            <input className="grow" placeholder="Holiday name" value={holidayForm.name}
-              onChange={(e) => setHolidayForm({ ...holidayForm, name: e.target.value })}
-              onKeyDown={(e) => e.key === 'Enter' && addHoliday()} />
-            <select style={{ maxWidth: 120 }} value={holidayForm.holiday_type}
-              onChange={(e) => setHolidayForm({ ...holidayForm, holiday_type: e.target.value })} aria-label="Holiday type">
-              <option value="public">Public</option><option value="festival">Festival</option><option value="shop">Shop</option>
-            </select>
-            <button className="btn ghost sm" onClick={addHoliday}>Add</button>
-          </div>
         </div>
       </div>
+      {showApply && (
+        <Modal
+          title="Apply for leave"
+          subtitle="Creates a pending request that can be approved or rejected."
+          onClose={() => setShowApply(false)}
+          size="md"
+          footer={
+            <>
+              <span className="hr-stat" style={{ alignSelf: 'center' }}>Requested: {reqDays} day(s)</span>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => setShowApply(false)}>Cancel</button>
+              <button type="submit" form="leave-form" className="btn gold" disabled={!form.employee_id || !form.leave_type_id || !reqDays}>Submit request</button>
+            </>
+          }
+        >
+          {msg && !msg.ok && <div className="err-box" style={{ marginBottom: 12 }}>{msg.text}</div>}
+          <form id="leave-form" onSubmit={(e) => { e.preventDefault(); apply(); }}>
+            <div className="hr-form-grid">
+              <div className="hr-field span-2">
+                <label className="lbl" htmlFor="lv-employee">Employee</label>
+                <select id="lv-employee" value={form.employee_id} onChange={(e) => setForm({ ...form, employee_id: e.target.value })}>
+                  <option value="">Select employee</option>
+                  {staff.map((e) => <option key={e.id} value={e.id}>{e.emp_code} · {e.full_name}</option>)}
+                </select>
+              </div>
+              <div className="hr-field">
+                <label className="lbl" htmlFor="lv-type">Leave type</label>
+                <select id="lv-type" value={form.leave_type_id} onChange={(e) => setForm({ ...form, leave_type_id: e.target.value })}>
+                  <option value="">Select type</option>
+                  {leaveTypes.map((t) => <option key={t.id} value={t.id}>{t.name}{t.paid ? '' : ' (unpaid)'}</option>)}
+                </select>
+              </div>
+              <div className="hr-field">
+                <label className="lbl" htmlFor="lv-from">From</label>
+                <input id="lv-from" type="date" value={form.from_date} onChange={(e) => setForm({ ...form, from_date: e.target.value })} />
+              </div>
+              <div className="hr-field">
+                <label className="lbl" htmlFor="lv-to">To</label>
+                <input id="lv-to" type="date" value={form.to_date} onChange={(e) => setForm({ ...form, to_date: e.target.value })} />
+              </div>
+              <div className="hr-field span-all">
+                <label className="lbl" htmlFor="lv-reason">Reason</label>
+                <input id="lv-reason" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Optional" />
+              </div>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {showType && (
+        <Modal
+          title="Add leave type"
+          subtitle="Quota is the yearly entitlement per employee."
+          onClose={() => setShowType(false)}
+          size="sm"
+          footer={
+            <>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => setShowType(false)}>Cancel</button>
+              <button type="button" className="btn gold" onClick={addType} disabled={!typeForm.name.trim()}>Add type</button>
+            </>
+          }
+        >
+          {msg && !msg.ok && <div className="err-box" style={{ marginBottom: 12 }}>{msg.text}</div>}
+          <label className="lbl">Type name</label>
+          <input autoFocus value={typeForm.name} onChange={(e) => setTypeForm({ ...typeForm, name: e.target.value })} placeholder="e.g. Casual leave" />
+          <label className="lbl">Annual quota (days)</label>
+          <input type="number" min={0} value={typeForm.annual_quota} onChange={(e) => setTypeForm({ ...typeForm, annual_quota: e.target.value })} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, fontSize: 13 }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={typeForm.paid} onChange={(e) => setTypeForm({ ...typeForm, paid: e.target.checked })} />
+            <span>Paid leave</span>
+          </label>
+        </Modal>
+      )}
+
+      {showHoliday && (
+        <Modal
+          title="Add holiday"
+          subtitle="Holidays appear on the attendance register for the selected year."
+          onClose={() => setShowHoliday(false)}
+          size="sm"
+          footer={
+            <>
+              <span className="grow" />
+              <button type="button" className="btn ghost" onClick={() => setShowHoliday(false)}>Cancel</button>
+              <button type="button" className="btn gold" onClick={addHoliday} disabled={!holidayForm.name.trim()}>Add holiday</button>
+            </>
+          }
+        >
+          {msg && !msg.ok && <div className="err-box" style={{ marginBottom: 12 }}>{msg.text}</div>}
+          <label className="lbl">Date</label>
+          <input type="date" value={holidayForm.holiday_date} onChange={(e) => setHolidayForm({ ...holidayForm, holiday_date: e.target.value })} />
+          <label className="lbl">Holiday name</label>
+          <input autoFocus value={holidayForm.name} onChange={(e) => setHolidayForm({ ...holidayForm, name: e.target.value })} placeholder="e.g. Diwali" />
+          <label className="lbl">Type</label>
+          <select value={holidayForm.holiday_type} onChange={(e) => setHolidayForm({ ...holidayForm, holiday_type: e.target.value })}>
+            <option value="public">Public</option><option value="festival">Festival</option><option value="shop">Shop</option>
+          </select>
+        </Modal>
+      )}
     </HrShell>
   );
 }

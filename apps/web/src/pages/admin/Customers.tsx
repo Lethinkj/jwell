@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api, inr } from '../../lib/api';
 import InvoiceModal from '../../components/InvoiceModal';
+import Modal from '../../components/Modal';
+import { Icon, ICONS } from '../../components/icons';
 import { downloadInvoicePdf } from '../../lib/invoicePdf';
 
 const EMPTY_FORM = {
@@ -27,11 +30,11 @@ function CustomerFields({ value, onChange, errors }: { value: any; onChange: (v:
         onChange={(e) => set(k, e.target.value)}
         placeholder={opts.placeholder}
       />
-      {errors?.[k] && <div style={{ color: 'var(--color-error)', fontSize: 11, marginTop: 2 }}>{errors[k]}</div>}
+      {errors?.[k] && <div className="modal-error">{errors[k]}</div>}
     </div>
   );
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
+    <div className="modal-grid">
       {field('name', { placeholder: 'e.g. Radhika Sethi' })}
       {field('phone', { type: 'tel', placeholder: '10-digit mobile' })}
       {field('email', { type: 'email', placeholder: 'name@example.com' })}
@@ -45,11 +48,13 @@ function CustomerFields({ value, onChange, errors }: { value: any; onChange: (v:
   );
 }
 
-/* ── New customer form ─────────────────────────────────────────── */
-function NewCustomer() {
+/* ── New customer popup ────────────────────────────────────────── */
+function NewCustomerModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState<any>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState('');
+  const [saving, setSaving] = useState(false);
+
   const save = async () => {
     if (missingFields(form).length) {
       setErrors(Object.fromEntries(missingFields(form).map((k) => [k, 'Required'])));
@@ -57,101 +62,153 @@ function NewCustomer() {
       return;
     }
     try {
-      await api.post('/customers', form);
-      setMsg('Customer saved.'); setForm(EMPTY_FORM); setErrors({});
-    } catch (e: any) { setMsg(e.message); }
-  };
-  return (
-    <div>
-      <h1 style={{ fontFamily: 'var(--font-display)', margin: 0 }}>New Customer</h1>
-      <p style={{ color: 'var(--color-muted)' }}>Register a new customer profile. Name, phone and a full address are mandatory.</p>
-      {msg && <div className="card" style={{ marginBottom: 12 }}>{msg}</div>}
-      <div className="card" style={{ maxWidth: 820 }}>
-        <CustomerFields value={form} onChange={setForm} errors={errors} />
-        <label style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <input type="checkbox" style={{ width: 'auto' }} checked={form.marketing_consent} onChange={(e) => setForm({ ...form, marketing_consent: e.target.checked })} />
-          Marketing consent (channel: both)
-        </label>
-        <button className="btn gold" style={{ marginTop: 14 }} onClick={save}>Save customer</button>
-      </div>
-    </div>
-  );
-}
-
-/* ── Customer detail + edit modal ──────────────────────────────── */
-function CustomerDetailModal({ customerId, onClose, onChanged }: { customerId: string; onClose: () => void; onChanged: () => void }) {
-  const detail = useQuery({ queryKey: ['cus-d', customerId], queryFn: () => api.get(`/customers/${customerId}`) });
-  const [editForm, setEditForm] = useState<any>(null);
-  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
-  const [previewSaleId, setPreviewSaleId] = useState<string | null>(null);
-  const [downloadingSaleId, setDownloadingSaleId] = useState<string | null>(null);
-  const d = detail.data?.data;
-
-  const startEdit = () => {
-    setEditForm({
-      name: d.name ?? '', phone: d.phone ?? '', email: d.email ?? '',
-      address_line1: d.address_line1 ?? '', city: d.city ?? '', state: d.state ?? '', postal_code: d.postal_code ?? '',
-      birthday: d.birthday ?? '', anniversary: d.anniversary ?? '',
-    });
-    setEditErrors({}); setMsg('');
-  };
-  const saveEdit = async () => {
-    if (missingFields(editForm || {}).length) {
-      setEditErrors(Object.fromEntries(missingFields(editForm || {}).map((k) => [k, 'Required'])));
-      setMsg(missingMsg(editForm || {}));
-      return;
-    }
-    try {
       setSaving(true);
-      await api.patch(`/customers/${customerId}`, editForm);
-      setEditForm(null); setMsg('Customer updated.'); detail.refetch(); onChanged();
+      await api.post('/customers', form);
+      onSaved();
+      onClose();
     } catch (e: any) { setMsg(e.message); }
     finally { setSaving(false); }
   };
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(71,16,29,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+    <Modal
+      title="New customer"
+      subtitle="Register a customer profile. Name, phone and a full address are mandatory."
+      icon={<Icon paths={ICONS.customers} size={19} />}
+      onClose={onClose}
+      size="lg"
+      footer={
+        <>
+          <span className="modal-hint">Marketing consent defaults to opted in.</span>
+          <span className="grow" />
+          <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn gold" onClick={save} disabled={saving}>
+            {saving ? 'Saving…' : 'Save customer'}
+          </button>
+        </>
+      }
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="card"
-        style={{ background: 'var(--color-surface)', maxWidth: 780, width: '100%', maxHeight: '90vh', overflowY: 'auto', borderTop: '4px solid var(--color-gold-deep)' }}
+      {msg && <div className="err-box" style={{ marginBottom: 12 }}>{msg}</div>}
+      <CustomerFields value={form} onChange={setForm} errors={errors} />
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, fontSize: 13 }}>
+        <input
+          type="checkbox"
+          style={{ width: 'auto' }}
+          checked={form.marketing_consent}
+          onChange={(e) => setForm({ ...form, marketing_consent: e.target.checked })}
+        />
+        <span>Marketing consent (WhatsApp &amp; SMS campaigns)</span>
+      </label>
+    </Modal>
+  );
+}
+
+/* ── Edit customer popup (nested above the detail popup) ───────── */
+function EditCustomerModal({ customer, onClose, onSaved }: { customer: any; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState<any>({
+    name: customer.name ?? '', phone: customer.phone ?? '', email: customer.email ?? '',
+    address_line1: customer.address_line1 ?? '', city: customer.city ?? '', state: customer.state ?? '',
+    postal_code: customer.postal_code ?? '', birthday: customer.birthday ?? '', anniversary: customer.anniversary ?? '',
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (missingFields(form).length) {
+      setErrors(Object.fromEntries(missingFields(form).map((k) => [k, 'Required'])));
+      setMsg(missingMsg(form));
+      return;
+    }
+    try {
+      setSaving(true);
+      await api.patch(`/customers/${customer.id}`, form);
+      onSaved();
+      onClose();
+    } catch (e: any) { setMsg(e.message); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <Modal
+      title="Edit customer"
+      subtitle="Name, phone and a full address are mandatory."
+      icon={<Icon paths={ICONS.customers} size={19} />}
+      onClose={onClose}
+      size="lg"
+      zIndex={1100}
+      footer={
+        <>
+          <span className="grow" />
+          <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn gold" onClick={save} disabled={saving}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </>
+      }
+    >
+      {msg && <div className="err-box" style={{ marginBottom: 12 }}>{msg}</div>}
+      <CustomerFields value={form} onChange={setForm} errors={errors} />
+    </Modal>
+  );
+}
+
+/* ── Customer detail popup ─────────────────────────────────────── */
+function CustomerDetailModal({ customerId, onClose, onChanged }: { customerId: string; onClose: () => void; onChanged: () => void }) {
+  const detail = useQuery({ queryKey: ['cus-d', customerId], queryFn: () => api.get(`/customers/${customerId}`) });
+  const [editing, setEditing] = useState(false);
+  const [previewSaleId, setPreviewSaleId] = useState<string | null>(null);
+  const [downloadingSaleId, setDownloadingSaleId] = useState<string | null>(null);
+  const d = detail.data?.data;
+
+  return (
+    <>
+      <Modal
+        title={d ? d.name : 'Customer'}
+        subtitle={d ? `${d.customer_code} • ${d.phone}${d.email ? ` • ${d.email}` : ''}` : 'Loading customer record…'}
+        icon={<Icon paths={ICONS.customers} size={19} />}
+        onClose={onClose}
+        size="xl"
+        zIndex={1000}
+        footer={
+          <>
+            <span className="grow" />
+            <button type="button" className="btn ghost" onClick={onClose}>Close</button>
+            {d && <button type="button" className="btn gold" onClick={() => setEditing(true)}>Edit customer</button>}
+          </>
+        }
       >
-        {msg && <div style={{ marginBottom: 10, fontSize: 13 }}>{msg}</div>}
         {!d ? <div className="empty" style={{ padding: 40 }}>Loading…</div> : (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-              <h3 style={{ marginTop: 0 }}>{d.name} <small style={{ color: 'var(--color-muted)' }}>{d.customer_code}</small></h3>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {!editForm && <button className="btn ghost" onClick={startEdit}>✏️ Edit</button>}
-                <button className="btn ghost" onClick={onClose}>✕</button>
-              </div>
+          <>
+            <div className="modal-kpis">
+              <div className="modal-kpi"><small>Total spent</small><strong>{inr(d.total_spent_inr)}</strong></div>
+              <div className="modal-kpi"><small>Purchases</small><strong>{d.purchase_count ?? d.purchases.length}</strong></div>
+              <div className="modal-kpi"><small>Last purchase</small><strong>{d.purchases[0]?.sold_at?.slice(0, 10) || 'None'}</strong></div>
+              <div className="modal-kpi"><small>Consent</small><strong>{d.marketing_consent ? 'Opted in' : 'No'}</strong></div>
             </div>
-            {editForm ? (
-              <div style={{ margin: '8px 0 16px' }}>
-                <strong>Edit customer</strong>
-                <p style={{ color: 'var(--color-muted)', fontSize: 12, margin: '4px 0 8px' }}>Name, phone and full address are mandatory.</p>
-                <CustomerFields value={editForm} onChange={setEditForm} errors={editErrors} />
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                  <button className="btn gold" onClick={saveEdit} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
-                  <button className="btn ghost" onClick={() => { setEditForm(null); setEditErrors({}); }}>Cancel</button>
+
+            <div className="modal-grid" style={{ marginBottom: 16 }}>
+              <div>
+                <p className="modal-section-title">Contact</p>
+                <div className="pd-field"><span>Phone</span><strong>{d.phone || '—'}</strong></div>
+                <div className="pd-field"><span>Email</span><strong>{d.email || '—'}</strong></div>
+                <div className="pd-field"><span>Birthday</span><strong>{d.birthday || '—'}</strong></div>
+                <div className="pd-field"><span>Anniversary</span><strong>{d.anniversary || '—'}</strong></div>
+              </div>
+              <div>
+                <p className="modal-section-title">Address</p>
+                <div className="pd-field" style={{ alignItems: 'flex-start' }}>
+                  <span>Ship to</span>
+                  <strong style={{ textAlign: 'right' }}>
+                    {[d.address_line1, d.city, d.state, d.postal_code].filter(Boolean).join(', ') || 'No address on record'}
+                  </strong>
                 </div>
               </div>
-            ) : (
-              <>
-                <p>{d.phone} • {d.email || 'no email'} • {d.birthday ? `🎂 ${d.birthday}` : ''} {d.anniversary ? `💍 ${d.anniversary}` : ''}</p>
-                <p style={{ color: 'var(--color-muted)', fontSize: 13 }}>
-                  📍 {[d.address_line1, d.city, d.state, d.postal_code].filter(Boolean).join(', ') || 'No address on record'}
-                </p>
-              </>
-            )}
-            <strong>Purchases ({d.purchases.length})</strong>
-            <div style={{ overflowX: 'auto', margin: '8px 0 16px' }}>
-              <table className="tbl" style={{ width: '100%' }}>
+            </div>
+
+            <p className="modal-section-title">Purchases ({d.purchases.length})</p>
+            <div className="tbl-wrap">
+              <table className="tbl">
                 <thead>
                   <tr>
                     <th>Invoice</th>
@@ -168,9 +225,10 @@ function CustomerDetailModal({ customerId, onClose, onChanged }: { customerId: s
                       <td style={{ fontWeight: 600, textAlign: 'right' }}>{inr(s.total_inr)}</td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                          <button className="btn ghost" onClick={() => setPreviewSaleId(s.id)} style={{ padding: '2px 8px', fontSize: 11 }} title="View bill">👁️ View</button>
+                          <button type="button" className="btn ghost xs" onClick={() => setPreviewSaleId(s.id)} title="View bill">View</button>
                           <button
-                            className="btn ghost"
+                            type="button"
+                            className="btn ghost xs"
                             onClick={async () => {
                               try {
                                 setDownloadingSaleId(s.id);
@@ -181,10 +239,9 @@ function CustomerDetailModal({ customerId, onClose, onChanged }: { customerId: s
                               } finally { setDownloadingSaleId(null); }
                             }}
                             disabled={downloadingSaleId === s.id}
-                            style={{ padding: '2px 8px', fontSize: 11 }}
                             title="Download PDF"
                           >
-                            {downloadingSaleId === s.id ? '...' : '📥 PDF'}
+                            {downloadingSaleId === s.id ? '…' : 'PDF'}
                           </button>
                         </div>
                       </td>
@@ -194,33 +251,47 @@ function CustomerDetailModal({ customerId, onClose, onChanged }: { customerId: s
                 </tbody>
               </table>
             </div>
-            <strong>Consent history</strong>
-            <ul>{d.consent.map((c: any) => <li key={c.id}><small>{c.created_at?.slice(0, 10)} — {c.status} ({c.source})</small></li>)}</ul>
-          </div>
+
+            <p className="modal-section-title" style={{ marginTop: 16 }}>Consent history</p>
+            <ul className="modal-list">
+              {d.consent.map((c: any) => <li key={c.id}><small>{c.created_at?.slice(0, 10)} — {c.status} ({c.source})</small></li>)}
+              {!d.consent.length && <li><small style={{ color: 'var(--color-muted)' }}>No consent changes recorded.</small></li>}
+            </ul>
+          </>
         )}
-      </div>
+      </Modal>
+
+      {editing && d && (
+        <EditCustomerModal
+          customer={{ ...d, id: customerId }}
+          onClose={() => setEditing(false)}
+          onSaved={() => { detail.refetch(); onChanged(); }}
+        />
+      )}
+
       {previewSaleId && <InvoiceModal saleId={previewSaleId} onClose={() => setPreviewSaleId(null)} />}
-    </div>
+    </>
   );
 }
 
 /* ── All customers (table view) ────────────────────────────────── */
-function CustomerList() {
-  const [q, setQ] = useState('');
-  const [minSpent, setMinSpent] = useState('');
-  const [recency, setRecency] = useState('');
-  const [lastFrom, setLastFrom] = useState('');
-  const [lastTo, setLastTo] = useState('');
+const EMPTY_FILTERS = { q: '', minSpent: '', recency: '', lastFrom: '', lastTo: '' };
+
+function CustomerList({ startNew, onNewClosed }: { startNew: boolean; onNewClosed: () => void }) {
+  const [draft, setDraft] = useState(EMPTY_FILTERS);
+  const [applied, setApplied] = useState(EMPTY_FILTERS);
+  const [newOpen, setNewOpen] = useState(startNew);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [selId, setSelId] = useState<string | null>(null);
-  const extra = recency === 'repeat' ? '&repeat=1'
-    : recency.startsWith('last:') ? `&last_days=${recency.slice(5)}`
-    : recency.startsWith('lapsed:') ? `&lapsed_days=${recency.slice(7)}`
-    : recency === 'custom' && (lastFrom || lastTo) ? `&last_from=${lastFrom}&last_to=${lastTo}` : '';
+  const extra = applied.recency === 'repeat' ? '&repeat=1'
+    : applied.recency.startsWith('last:') ? `&last_days=${applied.recency.slice(5)}`
+    : applied.recency.startsWith('lapsed:') ? `&lapsed_days=${applied.recency.slice(7)}`
+    : applied.recency === 'custom' && (applied.lastFrom || applied.lastTo)
+      ? `&last_from=${applied.lastFrom}&last_to=${applied.lastTo}` : '';
   const query = useQuery({
-    queryKey: ['cus', q, minSpent, recency, lastFrom, lastTo, page, limit],
-    queryFn: () => api.get(`/customers?q=${encodeURIComponent(q)}&min_spent=${minSpent || 0}${extra}&page=${page}&limit=${limit}`),
+    queryKey: ['cus', applied, page, limit],
+    queryFn: () => api.get(`/customers?q=${encodeURIComponent(applied.q)}&min_spent=${applied.minSpent || 0}${extra}&page=${page}&limit=${limit}`),
   });
   const rows = query.data?.data || [];
   const total = query.data?.total ?? 0;
@@ -236,7 +307,21 @@ function CustomerList() {
     pages.push(totalPages);
     return pages;
   })();
-  const resetPage = <T,>(setter: (v: T) => void) => (v: T) => { setter(v); setPage(1); };
+  const hasFilters = !!(applied.q || applied.minSpent || applied.recency);
+  const closeNew = () => {
+    setNewOpen(false);
+    if (startNew) onNewClosed();
+  };
+
+  const search = () => {
+    setApplied({ ...draft });
+    setPage(1);
+  };
+  const clearAll = () => {
+    setDraft(EMPTY_FILTERS);
+    setApplied(EMPTY_FILTERS);
+    setPage(1);
+  };
 
   return (
     <div>
@@ -245,14 +330,30 @@ function CustomerList() {
           <h1 style={{ fontFamily: 'var(--font-display)', margin: 0 }}>All Customers</h1>
           <p style={{ color: 'var(--color-muted)', margin: '4px 0 0' }}>Every registered customer. Search and filter by name/phone/ID, spend and last purchase.</p>
         </div>
-        <button className="btn ghost" onClick={() => query.refetch()} style={{ fontSize: 13 }}>↻ Refresh</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" className="btn ghost" onClick={() => query.refetch()} style={{ fontSize: 13 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon paths={ICONS.refresh} size={14} />Refresh</span>
+          </button>
+          <button type="button" className="btn gold" onClick={() => setNewOpen(true)}>+ New customer</button>
+        </div>
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
         <div className="filters" style={{ marginBottom: 16 }}>
-          <input placeholder="Name / phone / ID / email" value={q} onChange={(e) => resetPage(setQ)(e.target.value)} style={{ minWidth: 240 }} />
-          <input placeholder="Min spend ₹" value={minSpent} onChange={(e) => resetPage(setMinSpent)(e.target.value)} />
-          <select value={recency} onChange={(e) => resetPage(setRecency)(e.target.value)}>
+          <input
+            placeholder="Name / phone / ID / email"
+            value={draft.q}
+            onChange={(e) => setDraft({ ...draft, q: e.target.value })}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } }}
+            style={{ minWidth: 240 }}
+          />
+          <input
+            placeholder="Min spend ₹"
+            value={draft.minSpent}
+            onChange={(e) => setDraft({ ...draft, minSpent: e.target.value })}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } }}
+          />
+          <select value={draft.recency} onChange={(e) => setDraft({ ...draft, recency: e.target.value })}>
             <option value="">Last purchase: any time</option>
             <option value="last:30">Purchased ≤ 30 days ago</option>
             <option value="last:60">Purchased ≤ 60 days ago</option>
@@ -263,14 +364,17 @@ function CustomerList() {
             <option value="repeat">Repeat customers (2+ bills)</option>
             <option value="custom">Custom date range…</option>
           </select>
-          {recency === 'custom' && (
+          {draft.recency === 'custom' && (
             <>
-              <input type="date" value={lastFrom} onChange={(e) => resetPage(setLastFrom)(e.target.value)} title="From" />
-              <input type="date" value={lastTo} onChange={(e) => resetPage(setLastTo)(e.target.value)} title="To" />
+              <input type="date" value={draft.lastFrom} onChange={(e) => setDraft({ ...draft, lastFrom: e.target.value })} title="From" />
+              <input type="date" value={draft.lastTo} onChange={(e) => setDraft({ ...draft, lastTo: e.target.value })} title="To" />
             </>
           )}
-          {(q || minSpent || recency) && (
-            <button className="btn ghost" style={{ minWidth: 80, fontSize: 12 }} onClick={() => { setQ(''); setMinSpent(''); setRecency(''); setLastFrom(''); setLastTo(''); setPage(1); }}>Clear</button>
+          <button type="button" className="btn gold" onClick={search}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon paths={ICONS.search} size={15} />Search</span>
+          </button>
+          {hasFilters && (
+            <button type="button" className="btn ghost" style={{ minWidth: 80, fontSize: 12 }} onClick={clearAll}>Clear</button>
           )}
         </div>
 
@@ -297,7 +401,7 @@ function CustomerList() {
               </thead>
               <tbody>
                 {rows.map((c: any, i: number) => (
-                  <tr key={c.id}>
+                  <tr key={c.id} className="row-clickable" onClick={() => setSelId(c.id)}>
                     <td style={{ color: 'var(--color-muted)' }}>{(page - 1) * limit + i + 1}</td>
                     <td><small style={{ color: 'var(--color-muted)' }}>{c.customer_code}</small></td>
                     <td><strong>{c.name}</strong></td>
@@ -308,7 +412,13 @@ function CustomerList() {
                     <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-gold-deep)', whiteSpace: 'nowrap' }}>{inr(c.total_spent_inr)}</td>
                     <td>{c.marketing_consent ? <span className="badge ok">Opted in</span> : <span className="badge warn">No</span>}</td>
                     <td style={{ textAlign: 'right' }}>
-                      <button className="btn ghost" onClick={() => setSelId(c.id)} style={{ padding: '4px 12px', fontSize: 12 }}>View</button>
+                      <button
+                        type="button"
+                        className="btn ghost xs"
+                        onClick={(e) => { e.stopPropagation(); setSelId(c.id); }}
+                      >
+                        View
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -328,25 +438,31 @@ function CustomerList() {
               {total > 0 && <span style={{ marginLeft: 6 }}>Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total} customers</span>}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <button className="btn ghost" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '6px 12px', fontSize: 13 }}>‹ Prev</button>
+              <button type="button" className="btn ghost" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '6px 12px', fontSize: 13 }}>‹ Prev</button>
               {pageNumbers.map((p, idx) => (
                 p === '...' ? (
                   <span key={`gap-${idx}`} style={{ padding: '0 4px', color: 'var(--color-muted)' }}>…</span>
                 ) : (
-                  <button key={p} onClick={() => setPage(p)} className={p === page ? 'btn gold' : 'btn ghost'} style={{ padding: '6px 11px', fontSize: 13, minWidth: 34 }}>{p}</button>
+                  <button type="button" key={p} onClick={() => setPage(p)} className={p === page ? 'btn gold' : 'btn ghost'} style={{ padding: '6px 11px', fontSize: 13, minWidth: 34 }}>{p}</button>
                 )
               ))}
-              <button className="btn ghost" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={{ padding: '6px 12px', fontSize: 13 }}>Next ›</button>
+              <button type="button" className="btn ghost" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={{ padding: '6px 12px', fontSize: 13 }}>Next ›</button>
             </div>
           </div>
         )}
       </div>
 
+      {newOpen && <NewCustomerModal onClose={closeNew} onSaved={() => { query.refetch(); }} />}
       {selId && <CustomerDetailModal customerId={selId} onClose={() => setSelId(null)} onChanged={() => query.refetch()} />}
     </div>
   );
 }
 
 export default function Customers({ mode = 'view' }: { mode?: 'new' | 'view' }) {
-  return <div className="page">{mode === 'new' ? <NewCustomer /> : <CustomerList />}</div>;
+  const navigate = useNavigate();
+  return (
+    <div className="page">
+      <CustomerList startNew={mode === 'new'} onNewClosed={() => navigate('/admin/customers')} />
+    </div>
+  );
 }

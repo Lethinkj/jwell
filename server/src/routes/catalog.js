@@ -152,7 +152,9 @@ router.get('/products/:id', async (req, res) => {  const row = await get(`SELECT
       si.net_gold_weight_g AS sold_net_gold_weight_g, si.rate_24k_per_g_inr AS sold_rate_24k_per_g_inr,
       si.gold_value_inr, si.making_charge_inr, si.stone_value_inr, si.wastage_charge_inr, si.other_charges_inr,
       si.discount_inr, si.tax_inr, si.offer_code,
-      c.name AS customer_name, c.phone AS customer_phone, c.customer_code
+      c.name AS customer_name, c.phone AS customer_phone, c.customer_code,
+      c.email AS customer_email, c.city AS customer_city, c.address_line1 AS customer_address_line1,
+      (SELECT string_agg(DISTINCT py.method, ', ') FROM payments py WHERE py.sale_id = s.id) AS payment_methods
     FROM sale_items si JOIN sales s ON s.id = si.sale_id
     LEFT JOIN customers c ON c.id = s.customer_id
     WHERE si.product_id = ? ORDER BY s.sold_at DESC LIMIT 20`, req.params.id);
